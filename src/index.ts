@@ -46,7 +46,7 @@ let realTime = null;
 let gameTime = 0;
 
 const player: Sprite = {
-  pos: { x: width / 2, y: GROUND_HEIGHT, z: 0 },
+  pos: { x: 0, y: GROUND_HEIGHT, z: 0 },
   vel: { x: 0, y: 0, z: 0 },
   zIndex: -1
 };
@@ -86,11 +86,12 @@ for (let i = 0; i < height; i++) {
 }
 
 const horizonI = zMap.indexOf(0);
+const xCenter = floor(width / 2);
 
 console.log(zMap);
 
 const treePos: Vector = {
-  x: width / 3,
+  x: 0,
   y: 0,
   z: 0
 };
@@ -133,7 +134,7 @@ function tick(t: number) {
   if (inputState.right) player.pos.x += TURNING_SPEED;
   if (inputState.jump) jump();
 
-  player.pos.x = clamp(player.pos.x, 0, width);
+  player.pos.x = clamp(player.pos.x, -width / 2, width / 2);
 
   if (player.pos.y < 0) {
     player.vel.y = clamp(player.vel.y + GRAVITY, -1, 1);
@@ -227,7 +228,7 @@ function drawImage(image: HTMLImageElement, pos: Vector, offset = 0) {
   const scale = offset / height || 1;
   ctx.drawImage(
     image,
-    floor(pos.x - SPRITE_DIMENSIONS / 2),
+    floor(xCenter + pos.x - SPRITE_DIMENSIONS / 2),
     floor(offset + pos.y + pos.z + (scale * SPRITE_DIMENSIONS) / 2),
     floor(SPRITE_DIMENSIONS * scale),
     floor(SPRITE_DIMENSIONS * scale)
