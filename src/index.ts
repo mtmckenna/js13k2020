@@ -1,4 +1,4 @@
-import carImageData from "../assets/car.png";
+import carImageData from "../assets/mailtruck.png";
 import treeImageData from "../assets/tree.png";
 
 const { abs, floor, round } = Math;
@@ -6,13 +6,11 @@ const { abs, floor, round } = Math;
 const canvas: HTMLCanvasElement = document.querySelector(
   "#game"
 ) as HTMLCanvasElement;
-const log = document.querySelector("#log") as HTMLElement;
 const ctx: CanvasRenderingContext2D = canvas.getContext("2d");
 let width = 320;
 let height = 240;
 const aspectRatio = width / height;
 const SPRITE_DIMENSIONS = 32;
-const GROUND_HEIGHT = height;
 const JUMP_VELOCITY = -7;
 const GRAVITY = 0.02;
 canvas.height = height;
@@ -27,12 +25,10 @@ treeImage.src = treeImageData;
 resize();
 requestAnimationFrame(tick);
 
-//const night1 = "#162433";
-const night1 = "#000";
 const grass1 = "#000";
 const road1 = "#000";
 const road2 = "#e2ebda";
-const groundPercent = 0.4;
+const groundPercent = 0.3;
 const maxWhiteLineWidthPercent = 0.009;
 const maxRoadWidthPercent = 0.95;
 const sideLineWidth = 5;
@@ -44,8 +40,6 @@ let groundHeight = floor(height * groundPercent);
 let roadStartX = (width - width * maxRoadWidthPercent) / 2;
 let realTime = null;
 let gameTime = 0;
-
-
 
 const sprites: Sprite[] = [];
 
@@ -65,13 +59,6 @@ for (let i = 0; i < height; i++) {
   roadWidths.push({ x1: startX, x2: startX + width });
 }
 
-const spriteScales: number[] = [];
-for (let i = 0; i < height; i++) {
-  const percent = i / height;
-  const width = percent;
-  spriteScales.push(width);
-}
-
 const cameraY = -10;
 const zMap: number[] = [];
 for (let i = 0; i < height; i++) {
@@ -81,10 +68,31 @@ for (let i = 0; i < height; i++) {
   zMap.push(z);
 }
 
+const roadSegments: number[] = [];
+let count = 0;
+let sign = 1;
+for (let i = 0; i < zMap.length; i++) {
+  if (count === 10) {
+    sign *= -1;
+    count = 0;
+  }
+
+  count++;
+  const val = .01 * sign;
+  roadSegments.push(val);
+}
+
+console.log("RS", roadSegments);
+
 const horizonI = zMap.indexOf(0);
 const xCenter = floor(width / 2);
 
+const halfHorizonI = horizonI + floor(((zMap.length - 1) - horizonI) / 2);
+const segmentSize = (zMap[zMap.length - 1] - zMap[halfHorizonI]) / 4;
+
 console.log(zMap);
+//console.log(halfHorizonI, zMap[halfHorizonI], (zMap[zMap.length - 1] - zMap[halfHorizonI]) / 8);
+
 
 const player: Sprite = {
   pos: { x: 0, y: 0, z: zMap[200] },
@@ -112,6 +120,7 @@ for (let i = 0; i < zMap.length; i++) {
 
 sprites.push(tree);
 
+//const MAX_TEX = 1;
 const MAX_TEX = 1;
 const TEX_DEN = 40;
 const TURNING_SPEED = 2;
@@ -119,7 +128,9 @@ const TURNING_SPEED = 2;
 const normalTime = 120;
 const jumpTime = 1000;
 let lastTime = -1;
-let xOffset = -1;
+let xOffset = 0;
+const movingSegment: RoadSegment = { dx: roadSegments[0], i: zMap.length + 1 };
+const bottomSegment: RoadSegment = { dx: 0, i: zMap.length };
 function tick(t: number) {
   if (lastTime === -1) {
     lastTime = t;
@@ -167,14 +178,17 @@ function tick(t: number) {
   ctx.fillStyle = road1;
   ctx.fillRect(0, 0, width, skyHeight);
 
-  // White lines
   let textureCoord = 0;
   let spriteIndex = 0;
-  for (let i = 0; i < height; i++) {
+  let dx = 0;
+  let ddx = 0;
+  movingSegment.i -= 1
+ 
+  for (let i = height - 1; i > 0; i--) {
     textureCoord += MAX_TEX / TEX_DEN;
     const zWorld = zMap[i];
     const index =
-      (((textureCoord - gameTime + zWorld) % MAX_TEX) + MAX_TEX) % MAX_TEX;
+      (((textureCoord + gameTime - zWorld) % MAX_TEX) + MAX_TEX) % MAX_TEX;
     const whiteLineWidth = whiteLineWidths[i];
     const roadWidth = roadWidths[i];
     const percent = i / height;
@@ -191,6 +205,27 @@ function tick(t: number) {
           break;
         }
       }
+
+      // Handle curves
+      if (i < movingSegment.i) {
+        dx = bottomSegment.dx;
+      } else if (i > movingSegment.i) {
+        dx = movingSegment.dx;
+      } 
+
+      // Moving segment reached horizon
+      if (movingSegment.i <= horizonI) {
+        bottomSegment.dx = movingSegment.dx;
+        bottomSegment.i = movingSegment.i;
+        movingSegment.i = zMap.length - 1;  
+        const segmentIndex = floor(gameTime % (roadSegments.length - 1));
+        movingSegment.dx = roadSegments[segmentIndex];
+        console.log(bottomSegment.i, horizonI);
+        console.log(segmentIndex, movingSegment.dx);
+      }
+
+      ddx += dx;
+      xOffset += ddx;
 
       ctx.strokeStyle = funColor(index);
       ctx.beginPath();
@@ -244,11 +279,19 @@ function drawImage(image: HTMLImageElement, pos: Vector, xOffset = 0, yOffset = 
   const scale = yOffset / height || 1;
   ctx.drawImage(
     image,
-    floor(xOffset + pos.x - scale * SPRITE_DIMENSIONS / 2),
-    floor(yOffset + pos.y + pos.z + (scale * SPRITE_DIMENSIONS) / 2),
-    floor(SPRITE_DIMENSIONS * scale),
-    floor(SPRITE_DIMENSIONS * scale)
+    floor(xOffset + pos.x + SPRITE_DIMENSIONS / 2),
+    floor(yOffset + pos.y + pos.z),
+    floor(SPRITE_DIMENSIONS),
+    floor(SPRITE_DIMENSIONS)
   );
+
+/*  ctx.drawImage(*/
+    //image,
+    //floor(xOffset + pos.x - scale * SPRITE_DIMENSIONS / 2),
+    //floor(yOffset + pos.y + pos.z + (scale * SPRITE_DIMENSIONS) / 2),
+    //floor(SPRITE_DIMENSIONS * scale),
+    //floor(SPRITE_DIMENSIONS * scale)
+  /*);*/
 }
 
 function clamp(num: number, min: number, max: number): number {
@@ -358,7 +401,6 @@ window.addEventListener("mouseup", () => {
 
 window.addEventListener("click", () => {
   jump();
-  //log.innerText += "click!\n";
 });
 
 window.addEventListener("resize", resize);
@@ -387,6 +429,11 @@ interface PointerState {
   playerX: number;
   x: number;
   y: number;
+}
+
+interface RoadSegment {
+  i: number;
+  dx: number;
 }
 
 function iForZPos(t: number) {
@@ -448,3 +495,9 @@ function cosPalette(
 
   return apbcos;
 }
+
+// TODO:
+// make zMap just be groundHeight
+// shoot pixels
+// add broken images
+// move interfaces into own file
