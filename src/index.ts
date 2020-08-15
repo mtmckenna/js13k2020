@@ -12,7 +12,7 @@ let width = 320;
 let height = 240;
 const aspectRatio = width / height;
 const SPRITE_DIMENSIONS = 32;
-const GROUND_HEIGHT = height - 10;
+const GROUND_HEIGHT = height;
 const JUMP_VELOCITY = -7;
 const GRAVITY = 0.02;
 canvas.height = height;
@@ -32,9 +32,9 @@ const night1 = "#000";
 const grass1 = "#000";
 const road1 = "#000";
 const road2 = "#e2ebda";
-const groundPercent = 0.5;
+const groundPercent = 0.4;
 const maxWhiteLineWidthPercent = 0.009;
-const maxRoadWidthPercent = 0.8;
+const maxRoadWidthPercent = 0.95;
 const sideLineWidth = 5;
 
 let maxRoadWidth = width * maxRoadWidthPercent;
@@ -45,11 +45,7 @@ let roadStartX = (width - width * maxRoadWidthPercent) / 2;
 let realTime = null;
 let gameTime = 0;
 
-const player: Sprite = {
-  pos: { x: 0, y: GROUND_HEIGHT, z: 0 },
-  vel: { x: 0, y: 0, z: 0 },
-  zIndex: -1
-};
+
 
 const sprites: Sprite[] = [];
 
@@ -90,6 +86,12 @@ const xCenter = floor(width / 2);
 
 console.log(zMap);
 
+const player: Sprite = {
+  pos: { x: 0, y: 0, z: zMap[200] },
+  vel: { x: 0, y: 0, z: 0 },
+  zIndex: 200
+};
+
 const treePos: Vector = {
   x: 0,
   y: 0,
@@ -117,6 +119,7 @@ const TURNING_SPEED = 2;
 const normalTime = 120;
 const jumpTime = 1000;
 let lastTime = -1;
+let xOffset = -1;
 function tick(t: number) {
   if (lastTime === -1) {
     lastTime = t;
@@ -132,13 +135,13 @@ function tick(t: number) {
 
   if (inputState.left) player.pos.x -= TURNING_SPEED;
   if (inputState.right) player.pos.x += TURNING_SPEED;
+
   if (inputState.jump) jump();
 
   player.pos.x = clamp(player.pos.x, -width / 2, width / 2);
+  xOffset = xCenter - player.pos.x;
 
-  if (player.pos.y < 0) {
-    player.vel.y = clamp(player.vel.y + GRAVITY, -1, 1);
-  }
+  if (player.pos.y < 0) player.vel.y = clamp(player.vel.y + GRAVITY, -1, 1);
 
   if (player.pos.y > 0) {
     player.vel.y = 0;
@@ -192,35 +195,35 @@ function tick(t: number) {
       ctx.strokeStyle = funColor(index);
       ctx.beginPath();
       ctx.moveTo(round(0), i);
-      ctx.lineTo(round(roadWidth.x1), i);
+      ctx.lineTo(round(roadWidth.x1 - xOffset + xCenter), i);
       ctx.closePath();
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.moveTo(round(roadWidth.x2 - sideLineWidth * percent), i);
-      ctx.lineTo(width, i);
+      ctx.moveTo(round(roadWidth.x2 - sideLineWidth * percent - xOffset + xCenter), i);
+      ctx.lineTo(width + xOffset, i);
       ctx.closePath();
       ctx.stroke();
 
       // Draw road
       ctx.strokeStyle = road2;
       ctx.beginPath();
-      ctx.moveTo(round(roadWidth.x1), i);
-      ctx.lineTo(round(roadWidth.x1 + sideLineWidth * percent), i);
+      ctx.moveTo(round(roadWidth.x1 - xOffset + xCenter), i);
+      ctx.lineTo(round(roadWidth.x1 + sideLineWidth * percent - xOffset + xCenter), i);
       ctx.closePath();
       ctx.stroke();
 
       ctx.strokeStyle = road2;
       ctx.beginPath();
-      ctx.moveTo(round(roadWidth.x2), i);
-      ctx.lineTo(round(roadWidth.x2 - sideLineWidth * percent), i);
+      ctx.moveTo(round(roadWidth.x2 - xOffset + xCenter), i);
+      ctx.lineTo(round(roadWidth.x2 - sideLineWidth * percent - xOffset + xCenter), i);
       ctx.closePath();
       ctx.stroke();
 
       ctx.strokeStyle = index < MAX_TEX / 2 ? road1 : road2;
       ctx.beginPath();
-      ctx.moveTo(round(whiteLineWidth.x1), i);
-      ctx.lineTo(round(whiteLineWidth.x2), i);
+      ctx.moveTo(round(whiteLineWidth.x1 - xOffset + xCenter), i);
+      ctx.lineTo(round(whiteLineWidth.x2 - xOffset + xCenter), i);
       ctx.closePath();
       ctx.stroke();
     }
@@ -233,16 +236,16 @@ function tick(t: number) {
     //drawImage(treeImage, sprite.pos, sprite.zIndex);
   });
 
-  drawImage(treeImage, tree.pos, tree.zIndex);
-  drawImage(carImage, player.pos, height - 2 * SPRITE_DIMENSIONS);
+  drawImage(treeImage, tree.pos, 0, tree.zIndex);
+  drawImage(carImage, player.pos, xOffset, player.zIndex);
 }
 
-function drawImage(image: HTMLImageElement, pos: Vector, offset = 0) {
-  const scale = offset / height || 1;
+function drawImage(image: HTMLImageElement, pos: Vector, xOffset = 0, yOffset = 0) {
+  const scale = yOffset / height || 1;
   ctx.drawImage(
     image,
-    floor(xCenter + pos.x - SPRITE_DIMENSIONS / 2),
-    floor(offset + pos.y + pos.z + (scale * SPRITE_DIMENSIONS) / 2),
+    floor(xOffset + pos.x - scale * SPRITE_DIMENSIONS / 2),
+    floor(yOffset + pos.y + pos.z + (scale * SPRITE_DIMENSIONS) / 2),
     floor(SPRITE_DIMENSIONS * scale),
     floor(SPRITE_DIMENSIONS * scale)
   );
