@@ -114,7 +114,7 @@ const MAX_TEX = 1;
 const TEX_DEN = 40;
 const TURNING_SPEED = 2;
 
-const normalTime = 1000;
+const normalTime = 120;
 const jumpTime = 1000;
 let lastTime = -1;
 function tick(t: number) {
@@ -188,6 +188,19 @@ function tick(t: number) {
           break;
         }
       }
+
+      ctx.strokeStyle = funColor(index);
+      ctx.beginPath();
+      ctx.moveTo(round(0), i);
+      ctx.lineTo(round(roadWidth.x1), i);
+      ctx.closePath();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(round(roadWidth.x2 - sideLineWidth * percent), i);
+      ctx.lineTo(width, i);
+      ctx.closePath();
+      ctx.stroke();
 
       // Draw road
       ctx.strokeStyle = road2;
@@ -394,11 +407,21 @@ function iForZPos(t: number) {
 }
 
 // https://www.iquilezles.org/www/articles/palettes/palettes.htm
-//
-//    vec3 brightness = vec3(0.3);
-//        vec3 contrast = vec3(0.5);
-//            vec3 osc = vec3(0.5,1.0,0.0);
-//                vec3 phase = vec3(0.4,0.9,0.2);
+const cpa = { x:.3, y: .3, z: .3 };
+const cpb = { x:.5, y: .3, z: 3 };
+const cpc = { x: .5, y: 1.0, z: 0 };
+const cpd = { x: .4, y: .9, z: .2 };
+
+function funColor(t: number): string {
+  const color = cosPalette(t, cpa, cpb, cpc, cpd);
+
+  color.x *= 256;
+  color.y *= 256;
+  color.z *= 256;
+
+  return `rgb(${color.x}, ${color.y}, ${color.z})`;
+}
+
 function cosPalette(
   t: number,
   a: Vector,
