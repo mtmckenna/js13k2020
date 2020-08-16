@@ -1,9 +1,9 @@
 import carImageData from "../assets/mailtruck-big.png";
 import treeImageData from "../assets/tree.png";
 import mailboxImageData from "../assets/mailbox.png";
-import whitehouse1ImageData from "../assets/whitehouse1.png";
-import whitehouse2ImageData from "../assets/whitehouse2.png";
-import whitehouse3ImageData from "../assets/whitehouse3.png";
+import whitehouse1ImageData from "../assets/whitehouse1-big.png";
+import whitehouse2ImageData from "../assets/whitehouse2-big.png";
+import whitehouse3ImageData from "../assets/whitehouse3-big.png";
 
 const { abs, ceil, floor, round, max, tan } = Math;
 
@@ -32,14 +32,14 @@ const treeImage = new Image();
 treeImage.src = treeImageData;
 
 const wh1 = new Image();
-wh1.src = whitehouse1ImageData;
 const wh2 = new Image();
-wh2.src = whitehouse2ImageData;
 const wh3 = new Image();
+wh1.src = whitehouse1ImageData;
+wh2.src = whitehouse2ImageData;
 wh3.src = whitehouse3ImageData;
-const whStartPos = width / 2 - SPRITE_DIMENSIONS * 3 / 2 + SPRITE_DIMENSIONS / 2;
-//const whStartPos = -SPRITE_DIMENSIONS * 3 / 2 + SPRITE_DIMENSIONS / 2; 
-//const whStartPos = 0;
+
+// TODO why is it sprite_dimensions / 2 and not big_sprite_dimensions / 2?
+const whStartPos = (width / 2) - (BIG_SPRITE_DIMENSIONS * 3) / 2 + (SPRITE_DIMENSIONS / 2);
 
 resize();
 requestAnimationFrame(tick);
@@ -190,9 +190,9 @@ function tick(t: number) {
 
   // Draw White House
   const whOffset = xCenter - xOffset;
-  drawImage2(wh1, ZERO_POS, whOffset + whStartPos, horizonI - SPRITE_DIMENSIONS);
-  drawImage2(wh2, ZERO_POS, whOffset + whStartPos + SPRITE_DIMENSIONS, horizonI - SPRITE_DIMENSIONS);
-  drawImage2(wh3, ZERO_POS, whOffset + whStartPos + 2 * SPRITE_DIMENSIONS, horizonI - SPRITE_DIMENSIONS);
+  drawImage2(wh1, ZERO_POS, whOffset + whStartPos, horizonI - BIG_SPRITE_DIMENSIONS, BIG_SPRITE_DIMENSIONS);
+  drawImage2(wh2, ZERO_POS, whOffset + whStartPos + BIG_SPRITE_DIMENSIONS, horizonI - BIG_SPRITE_DIMENSIONS, BIG_SPRITE_DIMENSIONS);
+  drawImage2(wh3, ZERO_POS, whOffset + whStartPos + 2 * BIG_SPRITE_DIMENSIONS, horizonI - BIG_SPRITE_DIMENSIONS, BIG_SPRITE_DIMENSIONS);
 
   //ctx.fillStyle = road1;
   //ctx.fillRect(0, 0, width, skyHeight);
