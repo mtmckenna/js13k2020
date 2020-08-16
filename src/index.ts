@@ -117,7 +117,8 @@ const playerI = playerIForGround50;
 const player: Sprite = {
   pos: { x: 0, y: 0, z: zMap[playerI] },
   vel: { x: 0, y: 0, z: 0 },
-  zIndex: playerI
+  i: playerI,
+  iCoord: playerI,
 };
 
 const treePos: Vector = {
@@ -129,7 +130,8 @@ const treePos: Vector = {
 const tree: Sprite = {
   pos: treePos,
   vel: { x: 0, y: 0, z: 0.01 },
-  zIndex: -1,
+  i: -1,
+  iCoord: -1,
 };
 
 const sideSprites: Sprite[] = [];
@@ -138,7 +140,7 @@ sideSprites.push(tree);
 const MAX_TEX = 2;
 //const MAX_TEX = 5;
 const TEX_DEN = MAX_TEX * 10;
-const TURNING_SPEED = 2;
+const TURNING_SPEED = 1;
 
 const normalTime = 50;
 const jumpTime = 500;
@@ -156,7 +158,8 @@ function tick(t: number) {
     return;
   }
 
-  const divisor = player.pos.y < 0 ? jumpTime : normalTime;
+  const jumping = player.pos.y < 0;
+  const divisor = jumping ? jumpTime : normalTime;
   gameTime += 10 / divisor;
 
   realTime = t;
@@ -199,7 +202,9 @@ function tick(t: number) {
   //movingSegment.i -= .5;
 
   sideSprites.forEach(sprite => {
-    sprite.zIndex = clamp(sprite.zIndex + 2, skyHeight - SPRITE_DIMENSIONS * 1.5, height - 1);
+   const increase = jumping? .18 : 1.8;
+    sprite.iCoord = clamp(sprite.iCoord + increase, skyHeight - SPRITE_DIMENSIONS * 1.5, height - 1);
+    sprite.i = round(sprite.iCoord);
   });
 
   for (let i = zMap.length - 1; i > skyHeight; i--) {
@@ -212,12 +217,12 @@ function tick(t: number) {
     const roadWidth = roadWidths[i];
     const percent = max(i / groundHeight, .3);
 
-    // Set zIndex on sprites
+    // Set i on sprites
     const currentSprite = sprites[spriteIndex];
     while (spriteIndex < sprites.length) {
       if (currentSprite.pos.z <= zWorld) {
         //console.log(currentSprite.zIndex, currentSprite.pos.z, gameTime);
-        currentSprite.zIndex = i;
+        currentSprite.i = i;
         //currentSprite.zIndex = skyHeight + i;
         spriteIndex++;
       } else {
@@ -311,22 +316,25 @@ function tick(t: number) {
   //});
 
   sideSprites.forEach(sprite => {
-    if (sprite.zIndex === -1) return;
+    if (sprite.i === -1) return;
 
-    const roadWidth = roadWidths[sprite.zIndex];
+    const roadWidth = roadWidths[sprite.i];
     //console.log(roadWidth.x2);
-    const percent = max(sprite.zIndex / groundHeight, .3);
+    const percent = max(sprite.i / groundHeight, .3);
 
     const x = round(roadWidth.x2 - sideLineWidth * percent - xOffset + xCenter);
     //drawImage2(treeImage, sprite.pos, xCenter - player.pos.x + roadWidth.x2/2, sprite.zIndex);
-    drawImage2(treeImage, sprite.pos, x + SPRITE_DIMENSIONS, sprite.zIndex);
+    //console.log("UH OH", tree.i);
+    drawImage2(treeImage, sprite.pos, x + SPRITE_DIMENSIONS, sprite.i);
   });
 
-  if (tree.zIndex > zMap.length - 2) {
-    tree.zIndex = skyHeight - SPRITE_DIMENSIONS;
+  if (tree.i > zMap.length - 2) {
+    tree.i = skyHeight - SPRITE_DIMENSIONS;
+    tree.iCoord = tree.i;
+    console.log("HELLO", tree.i);
   }
 
-  drawImage2(carImage, player.pos, xOffset, player.zIndex + horizonI, BIG_SPRITE_DIMENSIONS);
+  drawImage2(carImage, player.pos, xOffset, player.i + horizonI, BIG_SPRITE_DIMENSIONS);
 }
 
 function drawImage2(
@@ -503,7 +511,8 @@ interface InputState {
 interface Sprite {
   pos: Vector;
   vel: Vector;
-  zIndex: number;
+  i: number;
+  iCoord: number;
 }
 
 interface Vector {
