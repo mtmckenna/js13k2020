@@ -19,7 +19,7 @@ const BIG_SPRITE_DIMENSIONS = 64;
 const JUMP_VELOCITY = -7;
 const GRAVITY = 0.02;
 const GROUND_PERCENT = 0.5;
-const ROAD_WIDTH_PERCENT = 1.5;
+const ROAD_WIDTH_PERCENT = 1.1;
 const ZERO_POS = { x: 0, y: 0, z: 0 };
 
 canvas.height = height;
@@ -38,14 +38,13 @@ wh1.src = whitehouse1ImageData;
 wh2.src = whitehouse2ImageData;
 wh3.src = whitehouse3ImageData;
 
-// TODO why is it sprite_dimensions / 2 and not big_sprite_dimensions / 2?
-const whStartPos = (width / 2) - (BIG_SPRITE_DIMENSIONS * 3) / 2 + (SPRITE_DIMENSIONS / 2);
+const whStartPos = (width / 2) - (BIG_SPRITE_DIMENSIONS * 3) / 2 + (BIG_SPRITE_DIMENSIONS / 2);
 
 resize();
 requestAnimationFrame(tick);
 
 const sky = "#6c82a6";
-const grass1 = "#32a852";
+const grass1 = "#37946e";
 const grass2 = "#306b40";
 const road1 = "#8c8e91";
 const road2 = "#e2ebda";
@@ -53,6 +52,7 @@ const maxWhiteLineWidthPercent = 0.009;
 const sideLineWidth = 1;
 
 let maxRoadWidth = width * ROAD_WIDTH_PERCENT;
+//console.log("ROAD", maxRoadWidth / 2);
 let maxWhiteLineWidth = width * maxWhiteLineWidthPercent;
 let skyHeight = height * (1.0 - GROUND_PERCENT);
 let groundHeight = floor(height * GROUND_PERCENT);
@@ -121,7 +121,7 @@ const player: Sprite = {
 };
 
 const treePos: Vector = {
-  x: 205,
+  x: 0,
   y: 0,
   z: 0
 };
@@ -135,13 +135,14 @@ const tree: Sprite = {
 const sideSprites: Sprite[] = [];
 sideSprites.push(tree);
 
-//const MAX_TEX = 3;
-const MAX_TEX = 5;
+const MAX_TEX = 2;
+//const MAX_TEX = 5;
 const TEX_DEN = MAX_TEX * 10;
 const TURNING_SPEED = 2;
 
 const normalTime = 50;
 const jumpTime = 500;
+const sloMoRatio = normalTime / jumpTime;
 let lastTime = -1;
 let xOffset = 0;
 //const movingSegment: RoadSegment = { dx: roadSegments[0], i: zMap.length + 1 };
@@ -165,8 +166,8 @@ function tick(t: number) {
   if (inputState.right) player.pos.x += TURNING_SPEED;
   if (inputState.jump) jump();
 
-  player.pos.x = clamp(player.pos.x, -width / 2, width / 2);
-  xOffset = xCenter - player.pos.x;
+  player.pos.x = clamp(player.pos.x, -width / 4, width / 4);
+  xOffset = xCenter + player.pos.x;
 
   if (player.pos.y < 0) player.vel.y = clamp(player.vel.y + GRAVITY, -1, 1);
 
@@ -185,17 +186,11 @@ function tick(t: number) {
   ctx.fillStyle = road1;
   ctx.fillRect(0, skyHeight, width, groundHeight);
 
-  // Road
-  ctx.strokeStyle = road1;
-
   // Draw White House
   const whOffset = xCenter - xOffset;
   drawImage2(wh1, ZERO_POS, whOffset + whStartPos, horizonI - BIG_SPRITE_DIMENSIONS, BIG_SPRITE_DIMENSIONS);
   drawImage2(wh2, ZERO_POS, whOffset + whStartPos + BIG_SPRITE_DIMENSIONS, horizonI - BIG_SPRITE_DIMENSIONS, BIG_SPRITE_DIMENSIONS);
   drawImage2(wh3, ZERO_POS, whOffset + whStartPos + 2 * BIG_SPRITE_DIMENSIONS, horizonI - BIG_SPRITE_DIMENSIONS, BIG_SPRITE_DIMENSIONS);
-
-  //ctx.fillStyle = road1;
-  //ctx.fillRect(0, 0, width, skyHeight);
 
   let textureCoord = 0;
   let spriteIndex = 0;
@@ -204,7 +199,7 @@ function tick(t: number) {
   //movingSegment.i -= .5;
 
   sideSprites.forEach(sprite => {
-    sprite.zIndex = clamp(sprite.zIndex + 1, skyHeight - SPRITE_DIMENSIONS * 1.5, height);
+    sprite.zIndex = clamp(sprite.zIndex + 2, skyHeight - SPRITE_DIMENSIONS * 1.5, height - 1);
   });
 
   for (let i = zMap.length - 1; i > skyHeight; i--) {
@@ -301,48 +296,37 @@ function tick(t: number) {
 
     ctx.strokeStyle = index < MAX_TEX / 2 ? road1 : road2;
     ctx.beginPath();
-    ctx.moveTo(floor(whiteLineWidth.x1 - xOffset + xCenter), i);
-    ctx.lineTo(ceil(whiteLineWidth.x2 - xOffset + xCenter), i);
+    ctx.moveTo(round(whiteLineWidth.x1 - xOffset + xCenter), i);
+    ctx.lineTo(round(whiteLineWidth.x2 - xOffset + xCenter), i);
     ctx.closePath();
     ctx.stroke();
 
     textureCoord %= MAX_TEX;
   }
 
-  sprites.forEach(sprite => {
-    if (sprite.zIndex === -1) return;
-    //console.log(sprite.zIndex);
-    drawImage(treeImage, sprite.pos, 0, sprite.zIndex);
-  });
+  //sprites.forEach(sprite => {
+    //if (sprite.zIndex === -1) return;
+    ////console.log(sprite.zIndex);
+    //drawImage(treeImage, sprite.pos, 0, sprite.zIndex);
+  //});
 
   sideSprites.forEach(sprite => {
     if (sprite.zIndex === -1) return;
-    drawImage(treeImage, sprite.pos, 0, sprite.zIndex);
+
+    const roadWidth = roadWidths[sprite.zIndex];
+    //console.log(roadWidth.x2);
+    const percent = max(sprite.zIndex / groundHeight, .3);
+
+    const x = round(roadWidth.x2 - sideLineWidth * percent - xOffset + xCenter);
+    //drawImage2(treeImage, sprite.pos, xCenter - player.pos.x + roadWidth.x2/2, sprite.zIndex);
+    drawImage2(treeImage, sprite.pos, x + SPRITE_DIMENSIONS, sprite.zIndex);
   });
 
-  if (tree.zIndex > zMap.length - 1) {
-    console.log("tree", tree.pos.z, tree.zIndex);
+  if (tree.zIndex > zMap.length - 2) {
     tree.zIndex = skyHeight - SPRITE_DIMENSIONS;
   }
 
-  drawTruck(carImage, player.pos, xOffset, player.zIndex + horizonI);
-}
-
-function drawTruck(
-  image: HTMLImageElement,
-  pos: Vector,
-  xOffset = 0,
-  yOffset = 0
-) {
-
-  ctx.drawImage(
-    image,
-    floor(xOffset + pos.x - BIG_SPRITE_DIMENSIONS / 2),
-    floor(yOffset + pos.y + pos.z),
-    floor(BIG_SPRITE_DIMENSIONS),
-    floor(BIG_SPRITE_DIMENSIONS)
-  );
-
+  drawImage2(carImage, player.pos, xOffset, player.zIndex + horizonI, BIG_SPRITE_DIMENSIONS);
 }
 
 function drawImage2(
@@ -356,7 +340,7 @@ function drawImage2(
 
   ctx.drawImage(
     image,
-    floor(xOffset + pos.x - SPRITE_DIMENSIONS / 2),
+    floor(xOffset + pos.x - dimensions / 2),
     floor(yOffset + pos.y + pos.z),
     floor(dimensions),
     floor(dimensions)
@@ -486,6 +470,7 @@ window.addEventListener("mousedown", () => {
 });
 
 window.addEventListener("mousemove", (e: MouseEvent) => {
+  if (!pointerState.down) return;
   const xPercentage = e.offsetX / window.innerWidth;
   const x = width * xPercentage;
   player.pos.x = x;
@@ -535,15 +520,15 @@ interface PointerState {
   y: number;
 }
 
-interface RoadChunk {
-  pos: Vector;
-  i: number;
-}
+//interface RoadChunk {
+  //pos: Vector;
+  //i: number;
+//}
 
-interface RoadSegment {
-  i: number;
-  dx: number;
-}
+//interface RoadSegment {
+  //i: number;
+  //dx: number;
+//}
 
 function iForZPos(t: number) {
   let l = 0;
