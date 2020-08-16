@@ -16,11 +16,12 @@ let height = 240;
 const aspectRatio = width / height;
 const SPRITE_DIMENSIONS = 32;
 const BIG_SPRITE_DIMENSIONS = 64;
-const JUMP_VELOCITY = -7;
+const JUMP_VELOCITY = -10;
 const GRAVITY = 0.02;
 const GROUND_PERCENT = 0.5;
 const ROAD_WIDTH_PERCENT = 1.1;
 const ZERO_POS = { x: 0, y: 0, z: 0 };
+const d = 1/tan(60/2);
 
 canvas.height = height;
 canvas.width = width;
@@ -29,7 +30,7 @@ const carImage = new Image();
 carImage.src = carImageData;
 
 const treeImage = new Image();
-treeImage.src = treeImageData;
+treeImage.src = mailboxImageData;
 
 const wh1 = new Image();
 const wh2 = new Image();
@@ -203,6 +204,7 @@ function tick(t: number) {
 
   sideSprites.forEach(sprite => {
    const increase = jumping? .18 : 1.8;
+   //const increase = jumping? .18 : .3;
     sprite.iCoord = clamp(sprite.iCoord + increase, skyHeight - SPRITE_DIMENSIONS * 1.5, height - 1);
     sprite.i = round(sprite.iCoord);
   });
@@ -325,7 +327,7 @@ function tick(t: number) {
     const x = round(roadWidth.x2 - sideLineWidth * percent - xOffset + xCenter);
     //drawImage2(treeImage, sprite.pos, xCenter - player.pos.x + roadWidth.x2/2, sprite.zIndex);
     //console.log("UH OH", tree.i);
-    drawImage2(treeImage, sprite.pos, x + SPRITE_DIMENSIONS, sprite.i);
+    drawImage2(treeImage, sprite.pos, x + SPRITE_DIMENSIONS, sprite.i, SPRITE_DIMENSIONS, false);
   });
 
   if (tree.i > zMap.length - 2) {
@@ -342,34 +344,28 @@ function drawImage2(
   pos: Vector,
   xOffset = 0,
   yOffset = 0,
-  dimensions = SPRITE_DIMENSIONS
+  dimensions = SPRITE_DIMENSIONS,
+  dontScale = true
 ) {
-  const scale = yOffset / height || 1;
+  let scale = 1.5 * yOffset / height || 1;
+  scale = dontScale ? 1 : scale;
+  const xScaleOffset = dontScale ? 0 : scale * dimensions / 2;
+  const yScaleOffset = dontScale ? 0 : scale * dimensions / 2;
 
   ctx.drawImage(
     image,
-    floor(xOffset + pos.x - dimensions / 2),
-    floor(yOffset + pos.y + pos.z),
-    floor(dimensions),
-    floor(dimensions)
+    floor(xOffset + pos.x - dimensions / 2 + xScaleOffset),
+    floor(yOffset + pos.y + pos.z + yScaleOffset),
+    floor(dimensions * scale),
+    floor(dimensions * scale)
   );
-
-  /*  ctx.drawImage(*/
-  //image,
-  //floor(xOffset + pos.x - scale * SPRITE_DIMENSIONS / 2),
-  //floor(yOffset + pos.y + pos.z + (scale * SPRITE_DIMENSIONS) / 2),
-  //floor(SPRITE_DIMENSIONS * scale),
-  //floor(SPRITE_DIMENSIONS * scale)
-  /*);*/
 }
-
-
 
 function drawImage(
   image: HTMLImageElement,
   pos: Vector,
   xOffset = 0,
-  yOffset = 0
+  yOffset = 0,
 ) {
   const scale = yOffset / height || 1;
 
@@ -488,7 +484,7 @@ window.addEventListener("touchmove", (e: TouchEvent) => {
   const xPercentage = e.touches[0].clientX / window.innerWidth;
   const x = width * xPercentage;
 
-  const diff = x - pointerState.x;
+  const diff = (x - pointerState.x) / 4;
   player.pos.x = pointerState.playerX + diff;
 });
 
