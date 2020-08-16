@@ -105,7 +105,7 @@ const player: Sprite = {
 };
 
 const treePos: Vector = {
-  x: 0,
+  x: 205,
   y: 0,
   z: 0
 };
@@ -113,21 +113,23 @@ const treePos: Vector = {
 const tree: Sprite = {
   pos: treePos,
   vel: { x: 0, y: 0, z: 0.01 },
-  zIndex: -1
+  zIndex: -1,
 };
 
 sprites.push(tree);
 
-const MAX_TEX = 1;
-const TEX_DEN = MAX_TEX * 35;
+const MAX_TEX = Math.PI / 2;
+const TEX_DEN = MAX_TEX * 10;
 const TURNING_SPEED = 2;
 
 const normalTime = 100;
-const jumpTime = 1000;
+const jumpTime = 500;
 let lastTime = -1;
 let xOffset = 0;
 const movingSegment: RoadSegment = { dx: roadSegments[0], i: zMap.length + 1 };
 const bottomSegment: RoadSegment = { dx: 0, i: zMap.length };
+const zHorizon = zMap[0];
+const zBottom = zMap[zMap.length - 1];
 function tick(t: number) {
   if (lastTime === -1) {
     lastTime = t;
@@ -156,13 +158,6 @@ function tick(t: number) {
   }
 
   player.pos.y += player.vel.y;
-
-  const startI = 1;
-  const maxI = zMap.length - startI;
-  const nI = startI + floor((TEX_DEN * gameTime) % maxI);
-  const z = zMap[nI];
-
-  tree.pos.z = z;
 
   // Ground
   ctx.fillStyle = grass1;
@@ -194,16 +189,16 @@ function tick(t: number) {
     const percent = max(i / groundHeight, .3);
 
     // Set zIndex on sprites
-    /*const currentSprite = sprites[spriteIndex];
+    const currentSprite = sprites[spriteIndex];
     while (spriteIndex < sprites.length) {
       if (currentSprite.pos.z <= zWorld) {
         //console.log(currentSprite.zIndex, currentSprite.pos.z, tn);
-        currentSprite.zIndex = i;
+        currentSprite.zIndex = skyHeight + i;
         spriteIndex++;
       } else {
         break;
       }
-    }*/
+    }
 /*
     // Handle curves
     if (i < movingSegment.i) {
@@ -265,28 +260,26 @@ function tick(t: number) {
     ctx.beginPath();
     ctx.moveTo(floor(whiteLineWidth.x1 - xOffset + xCenter), realI);
     ctx.lineTo(ceil(whiteLineWidth.x2 - xOffset + xCenter), realI);
-
-/*    ctx.moveTo(round(whiteLineWidth.x1 - xOffset + xCenter), realI - skyHeight);*/
-    /*ctx.lineTo(round(whiteLineWidth.x2 - xOffset + xCenter), realI - skyHeight);*/
     ctx.closePath();
     ctx.stroke();
-
-    //ctx.strokeStyle = "pink";
-    //ctx.beginPath();
-    //ctx.moveTo(0, realI);
-    //ctx.lineTo(width, realI);
-    //ctx.closePath();
-    /*ctx.stroke();*/
 
     textureCoord %= MAX_TEX;
   }
 
   sprites.forEach(sprite => {
     if (sprite.zIndex === -1) return;
-    //drawImage(treeImage, sprite.pos, sprite.zIndex);
+    //console.log(sprite.zIndex);
+    drawImage(treeImage, sprite.pos, 0, sprite.zIndex);
   });
 
-  //drawImage(treeImage, tree.pos, 0, tree.zIndex);
+  //tree.zIndex = ((tree.zIndex + 1) % zMap.length) + horizonI;
+
+  tree.pos.z -= .007;
+  if (tree.pos.z <= zBottom) {
+    tree.pos.z = zHorizon;
+  }
+  //console.log(tree.pos.z, zHorizon, zBottom, tree.zIndex);
+  //drawImage(treeImage, tree.pos);
   drawImage(carImage, player.pos, xOffset, player.zIndex + horizonI);
 }
 
@@ -527,3 +520,4 @@ function cosPalette(
 // mailboxes
 // lazer tractor beams
 // collect money
+// more usa stuff?
