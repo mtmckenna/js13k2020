@@ -1,6 +1,9 @@
-import carImageData from "../assets/mailtruck.png";
+import carImageData from "../assets/mailtruck-big.png";
 import treeImageData from "../assets/tree.png";
 import mailboxImageData from "../assets/mailbox.png";
+import whitehouse1ImageData from "../assets/whitehouse1.png";
+import whitehouse2ImageData from "../assets/whitehouse2.png";
+import whitehouse3ImageData from "../assets/whitehouse3.png";
 
 const { abs, ceil, floor, round, max, tan } = Math;
 
@@ -12,10 +15,12 @@ let width = 320;
 let height = 240;
 const aspectRatio = width / height;
 const SPRITE_DIMENSIONS = 32;
+const BIG_SPRITE_DIMENSIONS = 64;
 const JUMP_VELOCITY = -7;
 const GRAVITY = 0.02;
 const GROUND_PERCENT = 0.5;
 const ROAD_WIDTH_PERCENT = 1.5;
+const ZERO_POS = { x: 0, y: 0, z: 0 };
 
 canvas.height = height;
 canvas.width = width;
@@ -26,11 +31,23 @@ carImage.src = carImageData;
 const treeImage = new Image();
 treeImage.src = treeImageData;
 
+const wh1 = new Image();
+wh1.src = whitehouse1ImageData;
+const wh2 = new Image();
+wh2.src = whitehouse2ImageData;
+const wh3 = new Image();
+wh3.src = whitehouse3ImageData;
+const whStartPos = width / 2 - SPRITE_DIMENSIONS * 3 / 2 + SPRITE_DIMENSIONS / 2;
+//const whStartPos = -SPRITE_DIMENSIONS * 3 / 2 + SPRITE_DIMENSIONS / 2; 
+//const whStartPos = 0;
+
 resize();
 requestAnimationFrame(tick);
 
-const grass1 = "#000";
-const road1 = "#000";
+const sky = "#6c82a6";
+const grass1 = "#32a852";
+const grass2 = "#306b40";
+const road1 = "#8c8e91";
 const road2 = "#e2ebda";
 const maxWhiteLineWidthPercent = 0.009;
 const sideLineWidth = 1;
@@ -45,7 +62,7 @@ let gameTime = 0;
 
 const sprites: Sprite[] = [];
 
-const cameraY = 10;
+const cameraY = 30;
 const zMap: number[] = [];
 for (let i = 0; i < height; i++) {
   const worldY = cameraY;
@@ -94,7 +111,7 @@ console.log(zMap);
 
 let playerIForGround30 = 40;
 let playerIForGround45 = 70;
-let playerIForGround50 = 80;
+let playerIForGround50 = 50;
 let playerIForGround90 = 170;
 const playerI = playerIForGround50;
 const player: Sprite = {
@@ -119,18 +136,18 @@ const sideSprites: Sprite[] = [];
 sideSprites.push(tree);
 
 //const MAX_TEX = 3;
-const MAX_TEX = Math.PI;
+const MAX_TEX = 5;
 const TEX_DEN = MAX_TEX * 10;
 const TURNING_SPEED = 2;
 
-const normalTime = 100;
+const normalTime = 50;
 const jumpTime = 500;
 let lastTime = -1;
 let xOffset = 0;
-const movingSegment: RoadSegment = { dx: roadSegments[0], i: zMap.length + 1 };
-const bottomSegment: RoadSegment = { dx: 0, i: zMap.length };
-const zHorizon = zMap[skyHeight + 2];
-const zBottom = zMap[zMap.length - 1];
+//const movingSegment: RoadSegment = { dx: roadSegments[0], i: zMap.length + 1 };
+//const bottomSegment: RoadSegment = { dx: 0, i: zMap.length };
+//const zHorizon = zMap[skyHeight + 2];
+//const zBottom = zMap[zMap.length - 1];
 function tick(t: number) {
   if (lastTime === -1) {
     lastTime = t;
@@ -160,21 +177,31 @@ function tick(t: number) {
 
   player.pos.y += player.vel.y;
 
+  // Sky
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, width, height);
+
   // Ground
-  ctx.fillStyle = grass1;
+  ctx.fillStyle = road1;
   ctx.fillRect(0, skyHeight, width, groundHeight);
 
   // Road
   ctx.strokeStyle = road1;
 
-  ctx.fillStyle = road1;
-  ctx.fillRect(0, 0, width, skyHeight);
+  // Draw White House
+  const whOffset = xCenter - xOffset;
+  drawImage2(wh1, ZERO_POS, whOffset + whStartPos, horizonI - SPRITE_DIMENSIONS);
+  drawImage2(wh2, ZERO_POS, whOffset + whStartPos + SPRITE_DIMENSIONS, horizonI - SPRITE_DIMENSIONS);
+  drawImage2(wh3, ZERO_POS, whOffset + whStartPos + 2 * SPRITE_DIMENSIONS, horizonI - SPRITE_DIMENSIONS);
+
+  //ctx.fillStyle = road1;
+  //ctx.fillRect(0, 0, width, skyHeight);
 
   let textureCoord = 0;
   let spriteIndex = 0;
-  let dx = 0;
-  let ddx = 0;
-  movingSegment.i -= .5;
+  //let dx = 0;
+  //let ddx = 0;
+  //movingSegment.i -= .5;
 
   sideSprites.forEach(sprite => {
     sprite.zIndex = clamp(sprite.zIndex + 1, skyHeight - SPRITE_DIMENSIONS * 1.5, height);
@@ -231,10 +258,11 @@ function tick(t: number) {
       movingSegment.dx = roadSegments[segmentIndex];
     }*/
 
-    ddx += dx;
+    //ddx += dx;
     //xOffset += ddx;
 
-    ctx.strokeStyle = funColor(index);
+    //ctx.strokeStyle = funColor(index);
+    ctx.strokeStyle = index < MAX_TEX / 2 ? grass1 : grass2;
     ctx.beginPath();
     ctx.moveTo(round(0), i);
     ctx.lineTo(round(roadWidth.x1 - xOffset + xCenter), i);
@@ -297,8 +325,53 @@ function tick(t: number) {
     tree.zIndex = skyHeight - SPRITE_DIMENSIONS;
   }
 
-  drawImage(carImage, player.pos, xOffset, player.zIndex + horizonI);
+  drawTruck(carImage, player.pos, xOffset, player.zIndex + horizonI);
 }
+
+function drawTruck(
+  image: HTMLImageElement,
+  pos: Vector,
+  xOffset = 0,
+  yOffset = 0
+) {
+
+  ctx.drawImage(
+    image,
+    floor(xOffset + pos.x - BIG_SPRITE_DIMENSIONS / 2),
+    floor(yOffset + pos.y + pos.z),
+    floor(BIG_SPRITE_DIMENSIONS),
+    floor(BIG_SPRITE_DIMENSIONS)
+  );
+
+}
+
+function drawImage2(
+  image: HTMLImageElement,
+  pos: Vector,
+  xOffset = 0,
+  yOffset = 0,
+  dimensions = SPRITE_DIMENSIONS
+) {
+  const scale = yOffset / height || 1;
+
+  ctx.drawImage(
+    image,
+    floor(xOffset + pos.x - SPRITE_DIMENSIONS / 2),
+    floor(yOffset + pos.y + pos.z),
+    floor(dimensions),
+    floor(dimensions)
+  );
+
+  /*  ctx.drawImage(*/
+  //image,
+  //floor(xOffset + pos.x - scale * SPRITE_DIMENSIONS / 2),
+  //floor(yOffset + pos.y + pos.z + (scale * SPRITE_DIMENSIONS) / 2),
+  //floor(SPRITE_DIMENSIONS * scale),
+  //floor(SPRITE_DIMENSIONS * scale)
+  /*);*/
+}
+
+
 
 function drawImage(
   image: HTMLImageElement,
