@@ -1,7 +1,7 @@
 import carImageData from "../assets/mailtruck.png";
 import treeImageData from "../assets/tree.png";
 
-const { abs, floor, round } = Math;
+const { abs, floor, round, max, tan } = Math;
 
 const canvas: HTMLCanvasElement = document.querySelector(
   "#game"
@@ -13,6 +13,10 @@ const aspectRatio = width / height;
 const SPRITE_DIMENSIONS = 32;
 const JUMP_VELOCITY = -7;
 const GRAVITY = 0.02;
+const GROUND_PERCENT = 0.45;
+const FOV = 60;
+const d = 1/tan(FOV/2);
+
 canvas.height = height;
 canvas.width = width;
 
@@ -28,44 +32,43 @@ requestAnimationFrame(tick);
 const grass1 = "#000";
 const road1 = "#000";
 const road2 = "#e2ebda";
-const groundPercent = 0.3;
 const maxWhiteLineWidthPercent = 0.009;
 const maxRoadWidthPercent = 0.95;
 const sideLineWidth = 5;
 
 let maxRoadWidth = width * maxRoadWidthPercent;
 let maxWhiteLineWidth = width * maxWhiteLineWidthPercent;
-let skyHeight = height * (1.0 - groundPercent);
-let groundHeight = floor(height * groundPercent);
+let skyHeight = height * (1.0 - GROUND_PERCENT);
+let groundHeight = floor(height * GROUND_PERCENT);
 let roadStartX = (width - width * maxRoadWidthPercent) / 2;
 let realTime = null;
 let gameTime = 0;
 
 const sprites: Sprite[] = [];
 
-const whiteLineWidths: Array<{ x1: number; x2: number }> = [];
-for (let i = 0; i < height; i++) {
-  const percent = i / height;
-  const width = maxWhiteLineWidth * percent;
-  const startX = roadStartX + (maxRoadWidth - width) / 2;
-  whiteLineWidths.push({ x1: startX, x2: startX + width });
+const cameraY = 10;
+const zMap: number[] = [];
+for (let i = 0; i < groundHeight; i++) {
+  const worldY = cameraY;
+  const d = i - (height - groundHeight);
+  const z = d === 0 ? 0 : worldY / d;
+  zMap.push(z);
 }
 
 const roadWidths: Array<{ x1: number; x2: number }> = [];
-for (let i = 0; i < height; i++) {
-  const percent = i / height;
+for (let i = 0; i < zMap.length; i++) {
+  const percent = (skyHeight + i) / height;
   const width = maxRoadWidth * percent;
   const startX = roadStartX + (maxRoadWidth - width) / 2;
   roadWidths.push({ x1: startX, x2: startX + width });
 }
 
-const cameraY = -10;
-const zMap: number[] = [];
-for (let i = 0; i < height; i++) {
-  const worldY = cameraY;
-  const d = i - (height - groundHeight);
-  const z = d === 0 ? 0 : worldY / d;
-  zMap.push(z);
+const whiteLineWidths: Array<{ x1: number; x2: number }> = [];
+for (let i = 0; i < zMap.length; i++) {
+  const percent = (skyHeight + i) / height;
+  const width = maxWhiteLineWidth * percent;
+  const startX = roadStartX + (maxRoadWidth - width) / 2;
+  whiteLineWidths.push({ x1: startX, x2: startX + width });
 }
 
 const roadSegments: number[] = [];
@@ -78,26 +81,25 @@ for (let i = 0; i < zMap.length; i++) {
   }
 
   count++;
-  const val = .01 * sign;
+  const val = 0.01 * sign;
   roadSegments.push(val);
 }
 
-console.log("RS", roadSegments);
-
-const horizonI = zMap.indexOf(0);
+const horizonI = skyHeight;
 const xCenter = floor(width / 2);
 
-const halfHorizonI = horizonI + floor(((zMap.length - 1) - horizonI) / 2);
-const segmentSize = (zMap[zMap.length - 1] - zMap[halfHorizonI]) / 4;
+//const segmentSize = (abs(zMap[zMap.length - 1]) / zMap.length) * 10;
 
 console.log(zMap);
-//console.log(halfHorizonI, zMap[halfHorizonI], (zMap[zMap.length - 1] - zMap[halfHorizonI]) / 8);
 
-
+let playerIForGround30 = 40;
+let playerIForGround45 = 70;
+let playerIForGround90 = 170;
+const playerI = playerIForGround45;
 const player: Sprite = {
-  pos: { x: 0, y: 0, z: zMap[200] },
+  pos: { x: 0, y: 0, z: zMap[playerI] },
   vel: { x: 0, y: 0, z: 0 },
-  zIndex: 200
+  zIndex: playerI
 };
 
 const treePos: Vector = {
@@ -111,21 +113,14 @@ const tree: Sprite = {
   vel: { x: 0, y: 0, z: 0.01 },
   zIndex: -1
 };
-const rowDistances: number[] = [];
-for (let i = 0; i < zMap.length; i++) {
-  rowDistances.push(abs(1 / zMap[i]));
-}
-
-//console.log(zMap);
 
 sprites.push(tree);
 
-//const MAX_TEX = 1;
-const MAX_TEX = 1;
-const TEX_DEN = 40;
+const MAX_TEX = 1.5;
+const TEX_DEN = MAX_TEX * 50;
 const TURNING_SPEED = 2;
 
-const normalTime = 120;
+const normalTime = 100;
 const jumpTime = 1000;
 let lastTime = -1;
 let xOffset = 0;
@@ -139,14 +134,13 @@ function tick(t: number) {
   }
 
   const divisor = player.pos.y < 0 ? jumpTime : normalTime;
-  gameTime += 10.1 / divisor;
+  gameTime += 10 / divisor;
 
   realTime = t;
   requestAnimationFrame(tick);
 
   if (inputState.left) player.pos.x -= TURNING_SPEED;
   if (inputState.right) player.pos.x += TURNING_SPEED;
-
   if (inputState.jump) jump();
 
   player.pos.x = clamp(player.pos.x, -width / 2, width / 2);
@@ -161,7 +155,7 @@ function tick(t: number) {
 
   player.pos.y += player.vel.y;
 
-  const startI = horizonI + 1;
+  const startI = 1;
   const maxI = zMap.length - startI;
   const nI = startI + floor((TEX_DEN * gameTime) % maxI);
   const z = zMap[nI];
@@ -182,86 +176,92 @@ function tick(t: number) {
   let spriteIndex = 0;
   let dx = 0;
   let ddx = 0;
-  movingSegment.i -= 1
- 
-  for (let i = height - 1; i > 0; i--) {
+  movingSegment.i -= .5;
+
+  for (let i = zMap.length - 1; i > 0; i--) {
+    const realI = horizonI + i;
     textureCoord += MAX_TEX / TEX_DEN;
     const zWorld = zMap[i];
-    const index =
-      (((textureCoord + gameTime - zWorld) % MAX_TEX) + MAX_TEX) % MAX_TEX;
+    const index  = (textureCoord + gameTime - zWorld) % MAX_TEX;
+
     const whiteLineWidth = whiteLineWidths[i];
     const roadWidth = roadWidths[i];
-    const percent = i / height;
+    const percent = max(i / groundHeight, .3);
 
-    if (i > skyHeight) {
-      // Set zIndex on sprites
-      const currentSprite = sprites[spriteIndex];
-      while (spriteIndex < sprites.length) {
-        if (currentSprite.pos.z <= zWorld) {
-          //console.log(currentSprite.zIndex, currentSprite.pos.z, tn);
-          currentSprite.zIndex = i;
-          spriteIndex++;
-        } else {
-          break;
-        }
+    // Set zIndex on sprites
+    const currentSprite = sprites[spriteIndex];
+    while (spriteIndex < sprites.length) {
+      if (currentSprite.pos.z <= zWorld) {
+        //console.log(currentSprite.zIndex, currentSprite.pos.z, tn);
+        currentSprite.zIndex = i;
+        spriteIndex++;
+      } else {
+        break;
       }
-
-      // Handle curves
-      if (i < movingSegment.i) {
-        dx = bottomSegment.dx;
-      } else if (i > movingSegment.i) {
-        dx = movingSegment.dx;
-      } 
-
-      // Moving segment reached horizon
-      if (movingSegment.i <= horizonI) {
-        bottomSegment.dx = movingSegment.dx;
-        bottomSegment.i = movingSegment.i;
-        movingSegment.i = zMap.length - 1;  
-        const segmentIndex = floor(gameTime % (roadSegments.length - 1));
-        movingSegment.dx = roadSegments[segmentIndex];
-        console.log(bottomSegment.i, horizonI);
-        console.log(segmentIndex, movingSegment.dx);
-      }
-
-      ddx += dx;
-      xOffset += ddx;
-
-      ctx.strokeStyle = funColor(index);
-      ctx.beginPath();
-      ctx.moveTo(round(0), i);
-      ctx.lineTo(round(roadWidth.x1 - xOffset + xCenter), i);
-      ctx.closePath();
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(round(roadWidth.x2 - sideLineWidth * percent - xOffset + xCenter), i);
-      ctx.lineTo(width + xOffset, i);
-      ctx.closePath();
-      ctx.stroke();
-
-      // Draw road
-      ctx.strokeStyle = road2;
-      ctx.beginPath();
-      ctx.moveTo(round(roadWidth.x1 - xOffset + xCenter), i);
-      ctx.lineTo(round(roadWidth.x1 + sideLineWidth * percent - xOffset + xCenter), i);
-      ctx.closePath();
-      ctx.stroke();
-
-      ctx.strokeStyle = road2;
-      ctx.beginPath();
-      ctx.moveTo(round(roadWidth.x2 - xOffset + xCenter), i);
-      ctx.lineTo(round(roadWidth.x2 - sideLineWidth * percent - xOffset + xCenter), i);
-      ctx.closePath();
-      ctx.stroke();
-
-      ctx.strokeStyle = index < MAX_TEX / 2 ? road1 : road2;
-      ctx.beginPath();
-      ctx.moveTo(round(whiteLineWidth.x1 - xOffset + xCenter), i);
-      ctx.lineTo(round(whiteLineWidth.x2 - xOffset + xCenter), i);
-      ctx.closePath();
-      ctx.stroke();
     }
+
+    // Handle curves
+    if (i < movingSegment.i) {
+      dx = bottomSegment.dx;
+    } else if (i > movingSegment.i) {
+      dx = movingSegment.dx;
+    }
+
+    // Moving segment reached horizon
+    if (movingSegment.i <= 0) {
+      bottomSegment.dx = movingSegment.dx;
+      bottomSegment.i = movingSegment.i;
+      movingSegment.i = zMap.length - 1;
+      const segmentIndex = floor(gameTime % (roadSegments.length - 1));
+      movingSegment.dx = roadSegments[segmentIndex];
+    }
+
+    ddx += dx;
+    //xOffset += ddx;
+
+    ctx.strokeStyle = funColor(index);
+    ctx.beginPath();
+    ctx.moveTo(round(0), realI);
+    ctx.lineTo(round(roadWidth.x1 - xOffset + xCenter), realI);
+    ctx.closePath();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(
+      round(roadWidth.x2 - sideLineWidth * percent - xOffset + xCenter),
+      realI
+    );
+    ctx.lineTo(width + xOffset, realI);
+    ctx.closePath();
+    ctx.stroke();
+
+    // Draw road
+    ctx.strokeStyle = road2;
+    ctx.beginPath();
+    ctx.moveTo(round(roadWidth.x1 - xOffset + xCenter), realI);
+    ctx.lineTo(
+      round(roadWidth.x1 + sideLineWidth * percent - xOffset + xCenter),
+      realI
+    );
+    ctx.closePath();
+    ctx.stroke();
+
+    ctx.strokeStyle = road2;
+    ctx.beginPath();
+    ctx.moveTo(round(roadWidth.x2 - xOffset + xCenter), realI);
+    ctx.lineTo(
+      round(roadWidth.x2 - sideLineWidth * percent - xOffset + xCenter),
+      realI
+    );
+    ctx.closePath();
+    ctx.stroke();
+
+    ctx.strokeStyle = index < MAX_TEX / 2 ? road1 : road2;
+    ctx.beginPath();
+    ctx.moveTo(round(whiteLineWidth.x1 - xOffset + xCenter), realI);
+    ctx.lineTo(round(whiteLineWidth.x2 - xOffset + xCenter), realI);
+    ctx.closePath();
+    ctx.stroke();
 
     textureCoord %= MAX_TEX;
   }
@@ -272,11 +272,17 @@ function tick(t: number) {
   });
 
   drawImage(treeImage, tree.pos, 0, tree.zIndex);
-  drawImage(carImage, player.pos, xOffset, player.zIndex);
+  drawImage(carImage, player.pos, xOffset, player.zIndex + horizonI);
 }
 
-function drawImage(image: HTMLImageElement, pos: Vector, xOffset = 0, yOffset = 0) {
+function drawImage(
+  image: HTMLImageElement,
+  pos: Vector,
+  xOffset = 0,
+  yOffset = 0
+) {
   const scale = yOffset / height || 1;
+
   ctx.drawImage(
     image,
     floor(xOffset + pos.x + SPRITE_DIMENSIONS / 2),
@@ -285,12 +291,12 @@ function drawImage(image: HTMLImageElement, pos: Vector, xOffset = 0, yOffset = 
     floor(SPRITE_DIMENSIONS)
   );
 
-/*  ctx.drawImage(*/
-    //image,
-    //floor(xOffset + pos.x - scale * SPRITE_DIMENSIONS / 2),
-    //floor(yOffset + pos.y + pos.z + (scale * SPRITE_DIMENSIONS) / 2),
-    //floor(SPRITE_DIMENSIONS * scale),
-    //floor(SPRITE_DIMENSIONS * scale)
+  /*  ctx.drawImage(*/
+  //image,
+  //floor(xOffset + pos.x - scale * SPRITE_DIMENSIONS / 2),
+  //floor(yOffset + pos.y + pos.z + (scale * SPRITE_DIMENSIONS) / 2),
+  //floor(SPRITE_DIMENSIONS * scale),
+  //floor(SPRITE_DIMENSIONS * scale)
   /*);*/
 }
 
@@ -437,7 +443,7 @@ interface RoadSegment {
 }
 
 function iForZPos(t: number) {
-  let l = horizonI + 1;
+  let l = 0;
   let r = zMap.length - 1;
 
   let i = -1;
@@ -445,22 +451,22 @@ function iForZPos(t: number) {
     i = floor((l + r) / 2);
     const z = zMap[i];
     if (z < t) {
-      l = i + 1;
-    } else if (z > t) {
       r = i - 1;
+    } else if (z > t) {
+      l = i + 1;
     } else {
       return i;
     }
   }
 
-  return i - 1;
+  return i;
 }
 
 // https://www.iquilezles.org/www/articles/palettes/palettes.htm
-const cpa = { x:.3, y: .3, z: .3 };
-const cpb = { x:.5, y: .3, z: 3 };
-const cpc = { x: .5, y: 1.0, z: 0 };
-const cpd = { x: .4, y: .9, z: .2 };
+const cpa = { x: 0.3, y: 0.3, z: 0.3 };
+const cpb = { x: 0.5, y: 0.3, z: 3 };
+const cpc = { x: 0.5, y: 1.0, z: 0 };
+const cpd = { x: 0.4, y: 0.9, z: 0.2 };
 
 function funColor(t: number): string {
   const color = cosPalette(t, cpa, cpb, cpc, cpd);
@@ -501,3 +507,8 @@ function cosPalette(
 // shoot pixels
 // add broken images
 // move interfaces into own file
+// lights on truck
+// white house
+// mailboxes
+// lazer tractor beams
+// collect money
