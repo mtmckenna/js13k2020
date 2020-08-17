@@ -1,6 +1,6 @@
 import carImageData from "../assets/mailtruck-big.png";
 import treeImageData from "../assets/tree.png";
-import mailboxImageData from "../assets/mailbox.png";
+import mailboxImageData from "../assets/mailbox-big.png";
 import whitehouse1ImageData from "../assets/whitehouse1-big.png";
 import whitehouse2ImageData from "../assets/whitehouse2-big.png";
 import whitehouse3ImageData from "../assets/whitehouse3-big.png";
@@ -21,7 +21,7 @@ const GRAVITY = 0.02;
 const GROUND_PERCENT = 0.5;
 const ROAD_WIDTH_PERCENT = 1.1;
 const ZERO_POS = { x: 0, y: 0, z: 0 };
-const d = 1/tan(60/2);
+//const d = 1/tan(60/2);
 
 canvas.height = height;
 canvas.width = width;
@@ -29,8 +29,11 @@ canvas.width = width;
 const carImage = new Image();
 carImage.src = carImageData;
 
-const treeImage = new Image();
-treeImage.src = mailboxImageData;
+const leftMailboxImage = new Image();
+leftMailboxImage.src = mailboxImageData;
+
+const rightMailboxImage = new Image();
+rightMailboxImage.src = mailboxImageData;
 
 const wh1 = new Image();
 const wh2 = new Image();
@@ -39,10 +42,10 @@ wh1.src = whitehouse1ImageData;
 wh2.src = whitehouse2ImageData;
 wh3.src = whitehouse3ImageData;
 
-const whStartPos = (width / 2) - (BIG_SPRITE_DIMENSIONS * 3) / 2 + (BIG_SPRITE_DIMENSIONS / 2);
+const whStartPos =
+  width / 2 - (BIG_SPRITE_DIMENSIONS * 3) / 2 + BIG_SPRITE_DIMENSIONS / 2;
 
 resize();
-requestAnimationFrame(tick);
 
 const sky = "#6c82a6";
 const grass1 = "#37946e";
@@ -116,27 +119,36 @@ let playerIForGround50 = 50;
 let playerIForGround90 = 170;
 const playerI = playerIForGround50;
 const player: Sprite = {
+  image: carImage,
   pos: { x: 0, y: 0, z: zMap[playerI] },
   vel: { x: 0, y: 0, z: 0 },
   i: playerI,
-  iCoord: playerI,
+  iCoord: playerI
 };
 
-const treePos: Vector = {
-  x: 0,
-  y: 0,
-  z: 0
-};
+const rightMailboxes: SideSprite[] = range(3).map(n => {
+  const iCoord = n + skyHeight + ((n * 40) % groundHeight);
+  return {
+    image: rightMailboxImage,
+    side: "right",
+    i: floor(iCoord),
+    iCoord: iCoord
+  };
+});
 
-const tree: Sprite = {
-  pos: treePos,
-  vel: { x: 0, y: 0, z: 0.01 },
-  i: -1,
-  iCoord: -1,
-};
+const leftMailboxes: SideSprite[] = range(3).map(n => {
+  const iCoord = n + skyHeight + ((n * 40) % groundHeight);
+  return {
+    image: leftMailboxImage,
+    side: "left",
+    i: floor(iCoord),
+    iCoord: iCoord
+  };
+});
 
-const sideSprites: Sprite[] = [];
-sideSprites.push(tree);
+console.log(rightMailboxes);
+
+const sideSprites: SideSprite[] = [];
 
 const MAX_TEX = 2;
 //const MAX_TEX = 5;
@@ -192,9 +204,27 @@ function tick(t: number) {
 
   // Draw White House
   const whOffset = xCenter - xOffset;
-  drawImage2(wh1, ZERO_POS, whOffset + whStartPos, horizonI - BIG_SPRITE_DIMENSIONS, BIG_SPRITE_DIMENSIONS);
-  drawImage2(wh2, ZERO_POS, whOffset + whStartPos + BIG_SPRITE_DIMENSIONS, horizonI - BIG_SPRITE_DIMENSIONS, BIG_SPRITE_DIMENSIONS);
-  drawImage2(wh3, ZERO_POS, whOffset + whStartPos + 2 * BIG_SPRITE_DIMENSIONS, horizonI - BIG_SPRITE_DIMENSIONS, BIG_SPRITE_DIMENSIONS);
+  drawImage2(
+    wh1,
+    ZERO_POS,
+    whOffset + whStartPos,
+    horizonI - BIG_SPRITE_DIMENSIONS,
+    BIG_SPRITE_DIMENSIONS
+  );
+  drawImage2(
+    wh2,
+    ZERO_POS,
+    whOffset + whStartPos + BIG_SPRITE_DIMENSIONS,
+    horizonI - BIG_SPRITE_DIMENSIONS,
+    BIG_SPRITE_DIMENSIONS
+  );
+  drawImage2(
+    wh3,
+    ZERO_POS,
+    whOffset + whStartPos + 2 * BIG_SPRITE_DIMENSIONS,
+    horizonI - BIG_SPRITE_DIMENSIONS,
+    BIG_SPRITE_DIMENSIONS
+  );
 
   let textureCoord = 0;
   let spriteIndex = 0;
@@ -203,21 +233,25 @@ function tick(t: number) {
   //movingSegment.i -= .5;
 
   sideSprites.forEach(sprite => {
-   const increase = jumping? .18 : 1.8;
-   //const increase = jumping? .18 : .3;
-    sprite.iCoord = clamp(sprite.iCoord + increase, skyHeight - SPRITE_DIMENSIONS * 1.5, height - 1);
+    const increase = jumping ? 0.18 : 1.8;
+    //const increase = jumping? .18 : .3;
+    sprite.iCoord = clamp(
+      sprite.iCoord + increase,
+      skyHeight - SPRITE_DIMENSIONS * 1.5,
+      height - 1
+    );
     sprite.i = round(sprite.iCoord);
   });
 
   for (let i = zMap.length - 1; i > skyHeight; i--) {
     textureCoord += MAX_TEX / TEX_DEN;
     const zWorld = zMap[i];
-    const index  = (textureCoord + gameTime + zWorld) % MAX_TEX;
+    const index = (textureCoord + gameTime + zWorld) % MAX_TEX;
     //const index = (((textureCoord + gameTime + zWorld) % MAX_TEX) + MAX_TEX) % MAX_TEX;
 
     const whiteLineWidth = whiteLineWidths[i];
     const roadWidth = roadWidths[i];
-    const percent = max(i / groundHeight, .3);
+    const percent = max(i / groundHeight, 0.3);
 
     // Set i on sprites
     const currentSprite = sprites[spriteIndex];
@@ -234,16 +268,16 @@ function tick(t: number) {
 
     //const currentSideSprite = sideSprites[sideSpriteIndex];
     //while (sideSpriteIndex < sideSprites.length) {
-      //if (currentSideSprite.pos.z <= zWorld) {
-        //console.log(currentSideSprite.zIndex, currentSideSprite.pos.z, gameTime);
-        //currentSideSprite.zIndex = i;
-        ////currentSprite.zIndex = skyHeight + i;
-        //sideSpriteIndex++;
-      //} else {
-        //break;
-      //}
+    //if (currentSideSprite.pos.z <= zWorld) {
+    //console.log(currentSideSprite.zIndex, currentSideSprite.pos.z, gameTime);
+    //currentSideSprite.zIndex = i;
+    ////currentSprite.zIndex = skyHeight + i;
+    //sideSpriteIndex++;
+    //} else {
+    //break;
+    //}
     /*}*/
-/*
+    /*
     // Handle curves
     if (i < movingSegment.i) {
       dx = bottomSegment.dx;
@@ -312,31 +346,47 @@ function tick(t: number) {
   }
 
   //sprites.forEach(sprite => {
-    //if (sprite.zIndex === -1) return;
-    ////console.log(sprite.zIndex);
-    //drawImage(treeImage, sprite.pos, 0, sprite.zIndex);
+  //if (sprite.zIndex === -1) return;
+  ////console.log(sprite.zIndex);
+  //drawImage(treeImage, sprite.pos, 0, sprite.zIndex);
   //});
 
   sideSprites.forEach(sprite => {
     if (sprite.i === -1) return;
 
     const roadWidth = roadWidths[sprite.i];
-    //console.log(roadWidth.x2);
-    const percent = max(sprite.i / groundHeight, .3);
+    const percent = max(sprite.i / groundHeight, 0.3);
+    //let x = round(roadWidth.x1 - xOffset + xCenter);
+    let x = round(roadWidth.x1 + player.pos.x - BIG_SPRITE_DIMENSIONS);
 
-    const x = round(roadWidth.x2 - sideLineWidth * percent - xOffset + xCenter);
-    //drawImage2(treeImage, sprite.pos, xCenter - player.pos.x + roadWidth.x2/2, sprite.zIndex);
-    //console.log("UH OH", tree.i);
-    drawImage2(treeImage, sprite.pos, x + SPRITE_DIMENSIONS, sprite.i, SPRITE_DIMENSIONS, false);
+  //xOffset = xCenter + player.pos.x;
+    let sign = -1;
+    //if (sprite.side === "right") x = round(roadWidth.x2 - sideLineWidth * percent - xOffset + xCenter);
+    if (sprite.side === "right") x = round(roadWidth.x2 - sideLineWidth * percent - xOffset + xCenter + BIG_SPRITE_DIMENSIONS / 2);
+    if (sprite.side === "right") sign = 1;
+
+    drawImage2(
+      sprite.image,
+      ZERO_POS,
+      x,
+      sprite.i,
+      BIG_SPRITE_DIMENSIONS,
+      false
+    );
+
+    if (sprite.i > zMap.length - 2) {
+      sprite.i = skyHeight - BIG_SPRITE_DIMENSIONS;
+      sprite.iCoord = sprite.i;
+    }
   });
 
-  if (tree.i > zMap.length - 2) {
-    tree.i = skyHeight - SPRITE_DIMENSIONS;
-    tree.iCoord = tree.i;
-    console.log("HELLO", tree.i);
-  }
-
-  drawImage2(carImage, player.pos, xOffset, player.i + horizonI, BIG_SPRITE_DIMENSIONS);
+  drawImage2(
+    player.image,
+    player.pos,
+    xOffset,
+    player.i + horizonI,
+    BIG_SPRITE_DIMENSIONS
+  );
 }
 
 function drawImage2(
@@ -347,13 +397,17 @@ function drawImage2(
   dimensions = SPRITE_DIMENSIONS,
   dontScale = true
 ) {
-  let scale = 1.5 * yOffset / height || 1;
+  let scale = (yOffset) / height || 1;
   scale = dontScale ? 1 : scale;
-  const xScaleOffset = dontScale ? 0 : scale * dimensions / 2;
-  const yScaleOffset = dontScale ? 0 : scale * dimensions / 2;
+  const xScaleOffset = dontScale ? 0 : (scale * dimensions);
+  const yScaleOffset = dontScale ? 0 : (scale * dimensions);
 
   ctx.drawImage(
     image,
+    0,
+    0,
+    dimensions,
+    dimensions,
     floor(xOffset + pos.x - dimensions / 2 + xScaleOffset),
     floor(yOffset + pos.y + pos.z + yScaleOffset),
     floor(dimensions * scale),
@@ -365,7 +419,7 @@ function drawImage(
   image: HTMLImageElement,
   pos: Vector,
   xOffset = 0,
-  yOffset = 0,
+  yOffset = 0
 ) {
   const scale = yOffset / height || 1;
 
@@ -384,6 +438,20 @@ function drawImage(
   //floor(SPRITE_DIMENSIONS * scale),
   //floor(SPRITE_DIMENSIONS * scale)
   /*);*/
+}
+
+async function load() {
+  console.log("loading");
+  const imageData = await flipImage(mailboxImageData);
+  requestAnimationFrame(tick);
+  const image = new Image();
+  image.src = imageData;
+  //rightMailbox.image = image;
+  rightMailboxes.forEach(mb => (mb.image = image));
+  sideSprites.push(...rightMailboxes, ...leftMailboxes);
+  console.log(sideSprites);
+  //sideSprites.push(rightMailbox);
+  console.log("loaded");
 }
 
 function clamp(num: number, min: number, max: number): number {
@@ -414,6 +482,7 @@ function resize() {
 const inputState: InputState = {
   left: false,
   right: false,
+  slow: false,
   jump: false
 };
 
@@ -433,8 +502,11 @@ window.addEventListener("keydown", (e: KeyboardEvent) => {
     case "ArrowRight":
       inputState.right = true;
       break;
-    case " ":
+    case "ArrowUp":
       inputState.jump = true;
+      break;
+    case "ArrowDown":
+      inputState.slow = true;
       break;
   }
 });
@@ -447,8 +519,11 @@ window.addEventListener("keyup", (e: KeyboardEvent) => {
     case "ArrowRight":
       inputState.right = false;
       break;
-    case " ":
+    case "ArrowUp":
       inputState.jump = false;
+      break;
+    case "ArrowDown":
+      inputState.slow = false;
       break;
   }
 });
@@ -498,18 +573,49 @@ window.addEventListener("click", () => {
 
 window.addEventListener("resize", resize);
 
+window.addEventListener("load", load);
+
+async function flipImage(imageData: any): Promise<string> {
+  const imgCanvas = document.createElement("canvas") as HTMLCanvasElement;
+  const imgCtx = imgCanvas.getContext("2d");
+
+  const image = new Image();
+  image.src = imageData;
+
+  return new Promise(resolve => {
+    image.onload = () => {
+      console.log(image.width);
+      imgCtx.translate(image.width, 0);
+      imgCtx.scale(-1, 1);
+      imgCtx.drawImage(image, 0, 0);
+      resolve(imgCanvas.toDataURL());
+    };
+  });
+}
+
 interface InputState {
   left: boolean;
   right: boolean;
+  slow: boolean;
   jump: boolean;
 }
 
 interface Sprite {
+  image: HTMLImageElement;
   pos: Vector;
   vel: Vector;
   i: number;
   iCoord: number;
 }
+
+interface SideSprite {
+  image: HTMLImageElement;
+  side: "left" | "right";
+  i: number;
+  iCoord: number;
+}
+
+
 
 interface Vector {
   x: number;
@@ -526,13 +632,13 @@ interface PointerState {
 }
 
 //interface RoadChunk {
-  //pos: Vector;
-  //i: number;
+//pos: Vector;
+//i: number;
 //}
 
 //interface RoadSegment {
-  //i: number;
-  //dx: number;
+//i: number;
+//dx: number;
 //}
 
 function iForZPos(t: number) {
@@ -595,13 +701,21 @@ function cosPalette(
   return apbcos;
 }
 
+function range(number) {
+  return Array.from(Array(number).keys());
+}
+
 // TODO:
-// shoot pixels
-// add broken images
-// move interfaces into own file
+// add money
+// add donkey/elephants
 // lights on truck
-// white house
-// mailboxes
 // lazer tractor beams
-// collect money
 // more usa stuff?
+// particles
+// clouds
+// flag
+// meter
+// collisions
+// points
+// wheels moving
+// invincibility thing during an amazon strike?
