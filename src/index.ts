@@ -1,5 +1,5 @@
 import carImageData from "../assets/mailtruck-big.png";
-import treeImageData from "../assets/tree.png";
+import goldImageData from "../assets/gold.png";
 import mailboxImageData from "../assets/mailbox-big.png";
 import whitehouse1ImageData from "../assets/whitehouse1-big.png";
 import whitehouse2ImageData from "../assets/whitehouse2-big.png";
@@ -29,11 +29,11 @@ canvas.width = width;
 const carImage = new Image();
 carImage.src = carImageData;
 
-const leftMailboxImage = new Image();
-leftMailboxImage.src = mailboxImageData;
-
 const rightMailboxImage = new Image();
 rightMailboxImage.src = mailboxImageData;
+
+const goldImage = new Image();
+goldImage.src = goldImageData;
 
 const wh1 = new Image();
 const wh2 = new Image();
@@ -70,7 +70,6 @@ const cameraY = 30;
 const zMap: number[] = [];
 for (let i = 0; i < height; i++) {
   const worldY = cameraY;
-  //const d = i - (height - groundHeight);
   const d = i - (height - groundHeight);
   const z = d === 0 ? 0 : worldY / d;
   zMap.push(z);
@@ -109,8 +108,6 @@ for (let i = 0; i < zMap.length; i++) {
 const horizonI = skyHeight;
 const xCenter = floor(width / 2);
 
-//const segmentSize = (abs(zMap[zMap.length - 1]) / zMap.length) * 10;
-
 const logBox: HTMLElement = document.querySelector("#log");
 console.log(zMap);
 
@@ -118,50 +115,55 @@ let playerIForGround30 = 40;
 let playerIForGround45 = 70;
 let playerIForGround50 = 50;
 let playerIForGround90 = 170;
-const playerI = playerIForGround50;
+const playerI = playerIForGround50 + horizonI;
 const player: Sprite = {
   image: carImage,
   pos: { x: 0, y: 0, z: zMap[playerI] },
   vel: { x: 0, y: 0, z: 0 },
   i: playerI,
-  iCoord: playerI
+  iCoord: playerI,
+  rect: {
+    x: -1,
+    y: -1,
+    width: BIG_SPRITE_DIMENSIONS,
+    height: BIG_SPRITE_DIMENSIONS
+  }
 };
 
-const rightMailboxes: SideSprite[] = range(3).map(n => {
+const rightMailboxes: SideSprite[] = range(1).map(n => {
   const iCoord = n + skyHeight + ((n * 40) % groundHeight);
   return {
     image: rightMailboxImage,
-    side: "right",
+    pos: { x: randomIntBetween(-80, 80), y: 0, z: 0 },
+    rect: { x: -1, y: -1, width: -1, height: -1 },
     i: floor(iCoord),
     iCoord: iCoord
   };
 });
 
-const leftMailboxes: SideSprite[] = range(3).map(n => {
+const golds: SideSprite[] = range(0).map(n => {
   const iCoord = n + skyHeight + ((n * 40) % groundHeight);
   return {
-    image: leftMailboxImage,
-    side: "left",
+    image: goldImage,
+    pos: { x: randomIntBetween(-80, 80), y: 0, z: 0 },
+    rect: { x: -1, y: -1, width: -1, height: -1 },
     i: floor(iCoord),
     iCoord: iCoord
   };
 });
-
-console.log(rightMailboxes);
 
 const sideSprites: SideSprite[] = [];
 
 const MAX_TEX = 2;
 //const MAX_TEX = 5;
 const TEX_DEN = MAX_TEX * 10;
-const TURNING_SPEED = 1;
+const TURNING_SPEED = 1.9;
 
 const SLOW_MULTIPLIER = 8;
 const normalTime = 50;
 const SIDE_SPRITE_INCREASE = 1.8;
 const SIDE_SPRIDE_SLOW_INCREASE = 1.8 / SLOW_MULTIPLIER;
 const jumpTime = normalTime * SLOW_MULTIPLIER;
-const sloMoRatio = normalTime / jumpTime;
 let lastTime = -1;
 let xOffset = 0;
 //const movingSegment: RoadSegment = { dx: roadSegments[0], i: zMap.length + 1 };
@@ -175,15 +177,21 @@ function tick(t: number) {
     return;
   }
 
-  const jumping = player.pos.y < 0 && player.vel.y > 0;
+  //const jumping = player.pos.y < 0 && player.vel.y > 0;
+  const jumping = player.pos.y < 0;
   const divisor = jumping ? jumpTime : normalTime;
+  const turningSpeed = jumping
+    ? TURNING_SPEED / SLOW_MULTIPLIER
+    : TURNING_SPEED;
   gameTime += 10 / divisor;
 
   realTime = t;
   requestAnimationFrame(tick);
 
-  if (inputState.left) player.pos.x -= TURNING_SPEED;
-  if (inputState.right) player.pos.x += TURNING_SPEED;
+  if (inputState.left)
+    updatePlayerPos(player.pos.x - turningSpeed, player.pos.y);
+  if (inputState.right)
+    updatePlayerPos(player.pos.x + turningSpeed, player.pos.y);
   if (inputState.jump) jump();
 
   player.pos.x = clamp(player.pos.x, -width / 4, width / 4);
@@ -356,29 +364,22 @@ function tick(t: number) {
 
   sideSprites.forEach(sprite => {
     if (sprite.i === -1) return;
-
-    const roadWidth = roadWidths[sprite.i];
-    const percent = max(sprite.i / groundHeight, 0.3);
-    //let x = round(roadWidth.x1 - xOffset + xCenter);
-    let x = round(roadWidth.x1 + player.pos.x - BIG_SPRITE_DIMENSIONS);
-
-  //xOffset = xCenter + player.pos.x;
-    let sign = -1;
-    //if (sprite.side === "right") x = round(roadWidth.x2 - sideLineWidth * percent - xOffset + xCenter);
-    if (sprite.side === "right") x = round(roadWidth.x2 - sideLineWidth * percent - xOffset + xCenter + BIG_SPRITE_DIMENSIONS / 2);
-    if (sprite.side === "right") sign = 1;
-
     drawImage2(
       sprite.image,
-      ZERO_POS,
-      x,
+      sprite.pos,
+      //xOffset,
+      xCenter - player.pos.x,
       sprite.i,
       BIG_SPRITE_DIMENSIONS,
       false
     );
 
+    overlaps(sprite);
+
     if (sprite.i > zMap.length - 2) {
       sprite.i = skyHeight - BIG_SPRITE_DIMENSIONS;
+      //sprite.pos.x = randomIntBetween(-120, 120);
+      sprite.pos.x = 0;
       sprite.iCoord = sprite.i;
     }
   });
@@ -387,7 +388,7 @@ function tick(t: number) {
     player.image,
     player.pos,
     xOffset,
-    player.i + horizonI,
+    player.i,
     BIG_SPRITE_DIMENSIONS
   );
 }
@@ -400,10 +401,11 @@ function drawImage2(
   dimensions = SPRITE_DIMENSIONS,
   dontScale = true
 ) {
-  let scale = (yOffset) / height || 1;
+  let scale = yOffset / height || 1;
   scale = dontScale ? 1 : scale;
-  const xScaleOffset = dontScale ? 0 : (scale * dimensions);
-  const yScaleOffset = dontScale ? 0 : (scale * dimensions);
+  let xScaleOffset = dimensions / 2;
+  if (!dontScale) xScaleOffset = (scale * dimensions) / 2; 
+  const yScaleOffset = dontScale ? 0 : scale * dimensions;
 
   ctx.drawImage(
     image,
@@ -411,7 +413,8 @@ function drawImage2(
     0,
     dimensions,
     dimensions,
-    floor(xOffset + pos.x - dimensions / 2 + xScaleOffset),
+    //floor(xOffset + pos.x - dimensions / 2 + xScaleOffset),
+    floor(xOffset + pos.x - xScaleOffset),
     floor(yOffset + pos.y + pos.z + yScaleOffset),
     floor(dimensions * scale),
     floor(dimensions * scale)
@@ -449,11 +452,9 @@ async function load() {
   requestAnimationFrame(tick);
   const image = new Image();
   image.src = imageData;
-  //rightMailbox.image = image;
   rightMailboxes.forEach(mb => (mb.image = image));
-  sideSprites.push(...rightMailboxes, ...leftMailboxes);
+  sideSprites.push(...rightMailboxes, ...golds);
   console.log(sideSprites);
-  //sideSprites.push(rightMailbox);
   console.log("loaded");
 }
 
@@ -464,6 +465,13 @@ function clamp(num: number, min: number, max: number): number {
 function jump() {
   if (player.pos.y !== 0) return;
   player.vel.y = JUMP_VELOCITY;
+}
+
+function updatePlayerPos(x: number, y: number) {
+  player.pos.x = x;
+  player.pos.y = y;
+  player.rect.x = x;
+  player.rect.y = y;
 }
 
 function resize() {
@@ -605,13 +613,15 @@ interface Sprite {
   image: HTMLImageElement;
   pos: Vector;
   vel: Vector;
+  rect: Rect;
   i: number;
   iCoord: number;
 }
 
 interface SideSprite {
   image: HTMLImageElement;
-  side: "left" | "right";
+  pos: Vector;
+  rect: Rect;
   i: number;
   iCoord: number;
 }
@@ -620,6 +630,13 @@ interface Vector {
   x: number;
   y: number;
   z: number;
+}
+
+interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 interface PointerState {
@@ -700,15 +717,48 @@ function cosPalette(
   return apbcos;
 }
 
+function overlaps(sprite: SideSprite) {
+  const past = sprite.i >= player.i;
+  if (!past) return;
+  let scale = sprite.i / height;
+  const r1x = player.pos.x;
+  const r2x = sprite.pos.x;
+  const r1w = BIG_SPRITE_DIMENSIONS;
+  const r2w = BIG_SPRITE_DIMENSIONS * scale;
+
+  const r1y = player.pos.y;
+  const r2y = sprite.pos.y;
+  const r1h = BIG_SPRITE_DIMENSIONS;
+  const r2h = BIG_SPRITE_DIMENSIONS * scale;
+
+  const h = r1x < r2x + r2w && r1x + r1w > r2x ? true : false;
+  const w = r1y < r2y + r2h && r1y + r1h > r2y ? true : false;
+
+  if (h && w) {
+    console.log("HIT", player.pos, sprite.pos);
+  }
+
+  /*if (rect1.x < rect2.x + rect2.width &&*/
+  //rect1.x + rect1.width > rect2.x &&
+  //rect1.y < rect2.y + rect2.height &&
+  /*rect1.y + rect1.height > rect2.y) {}*/
+}
+
 function range(number: number) {
   return Array.from(Array(number).keys());
 }
 
+function randomFloatBetween(min: number, max: number) {
+  return Math.random() * (max - min) + min;
+}
+
+function randomIntBetween(min: number, max: number) {
+  return Math.floor(randomFloatBetween(min, max + 1));
+}
+
 // TODO:
-// add money
 // add donkey/elephants
 // lights on truck
-// lazer tractor beams
 // more usa stuff?
 // particles
 // clouds
