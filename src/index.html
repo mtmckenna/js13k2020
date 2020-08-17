@@ -38,6 +38,16 @@
         overflow: hidden;
         color: #fff;
         -webkit-text-size-adjust: 100%;
+        background: rgb(148,0,0);
+        background: linear-gradient(180deg, rgba(148,0,0,1) 0%, rgba(255,255,255,1) 50%, rgba(8,0,129,1) 100%);
+      }
+
+      @media screen and (orientation: landscape) {
+        body {
+          background: rgb(148,0,0);
+          background: linear-gradient(90deg, rgba(148,0,0,1) 0%, rgba(255,255,255,1) 50%, rgba(8,0,129,1) 100%);
+
+        }
       }
 
       #game {
@@ -57,9 +67,19 @@
         flex-direction: column;
         height: 100%;
       }
+
+      #log {
+        height: 500px;
+        background-color: pink;
+        overflow-y: scroll;
+        color: #000;
+      }
     </style>
   </head>
   <body>
-    <div id="parent"><canvas id="game"></canvas></div>
+    <div id="parent"><canvas id="game"></canvas>
+
+    <!--<div id="log"></div>-->
+    </div>
   </body>
 </html>

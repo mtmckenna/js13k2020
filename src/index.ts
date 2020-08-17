@@ -16,7 +16,7 @@ let height = 240;
 const aspectRatio = width / height;
 const SPRITE_DIMENSIONS = 32;
 const BIG_SPRITE_DIMENSIONS = 64;
-const JUMP_VELOCITY = -10;
+const JUMP_VELOCITY = -30;
 const GRAVITY = 0.02;
 const GROUND_PERCENT = 0.5;
 const ROAD_WIDTH_PERCENT = 1.1;
@@ -111,6 +111,7 @@ const xCenter = floor(width / 2);
 
 //const segmentSize = (abs(zMap[zMap.length - 1]) / zMap.length) * 10;
 
+const logBox: HTMLElement = document.querySelector("#log");
 console.log(zMap);
 
 let playerIForGround30 = 40;
@@ -155,8 +156,11 @@ const MAX_TEX = 2;
 const TEX_DEN = MAX_TEX * 10;
 const TURNING_SPEED = 1;
 
+const SLOW_MULTIPLIER = 8;
 const normalTime = 50;
-const jumpTime = 500;
+const SIDE_SPRITE_INCREASE = 1.8;
+const SIDE_SPRIDE_SLOW_INCREASE = 1.8 / SLOW_MULTIPLIER;
+const jumpTime = normalTime * SLOW_MULTIPLIER;
 const sloMoRatio = normalTime / jumpTime;
 let lastTime = -1;
 let xOffset = 0;
@@ -171,7 +175,7 @@ function tick(t: number) {
     return;
   }
 
-  const jumping = player.pos.y < 0;
+  const jumping = player.pos.y < 0 && player.vel.y > 0;
   const divisor = jumping ? jumpTime : normalTime;
   gameTime += 10 / divisor;
 
@@ -233,8 +237,7 @@ function tick(t: number) {
   //movingSegment.i -= .5;
 
   sideSprites.forEach(sprite => {
-    const increase = jumping ? 0.18 : 1.8;
-    //const increase = jumping? .18 : .3;
+    const increase = jumping ? SIDE_SPRIDE_SLOW_INCREASE : SIDE_SPRITE_INCREASE;
     sprite.iCoord = clamp(
       sprite.iCoord + increase,
       skyHeight - SPRITE_DIMENSIONS * 1.5,
@@ -482,7 +485,6 @@ function resize() {
 const inputState: InputState = {
   left: false,
   right: false,
-  slow: false,
   jump: false
 };
 
@@ -505,8 +507,8 @@ window.addEventListener("keydown", (e: KeyboardEvent) => {
     case "ArrowUp":
       inputState.jump = true;
       break;
-    case "ArrowDown":
-      inputState.slow = true;
+    case " ":
+      inputState.jump = true;
       break;
   }
 });
@@ -522,8 +524,8 @@ window.addEventListener("keyup", (e: KeyboardEvent) => {
     case "ArrowUp":
       inputState.jump = false;
       break;
-    case "ArrowDown":
-      inputState.slow = false;
+    case " ":
+      inputState.jump = false;
       break;
   }
 });
@@ -537,7 +539,7 @@ window.addEventListener("touchstart", (e: TouchEvent) => {
   pointerState.playerX = player.pos.x;
 });
 
-window.addEventListener("touchend", () => {
+window.addEventListener("touchend", (e: TouchEvent) => {
   pointerState.down = false;
   if (realTime - pointerState.downAt < 500) jump();
   pointerState.downAt = null;
@@ -596,7 +598,6 @@ async function flipImage(imageData: any): Promise<string> {
 interface InputState {
   left: boolean;
   right: boolean;
-  slow: boolean;
   jump: boolean;
 }
 
@@ -614,8 +615,6 @@ interface SideSprite {
   i: number;
   iCoord: number;
 }
-
-
 
 interface Vector {
   x: number;
@@ -701,7 +700,7 @@ function cosPalette(
   return apbcos;
 }
 
-function range(number) {
+function range(number: number) {
   return Array.from(Array(number).keys());
 }
 
