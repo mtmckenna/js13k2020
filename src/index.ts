@@ -1,11 +1,12 @@
 import carImageData from "../assets/mailtruck-big.png";
+import brickWallImageData from "../assets/brick-wall.png";
 import goldImageData from "../assets/gold.png";
 import mailboxImageData from "../assets/mailbox-big.png";
 import whitehouse1ImageData from "../assets/whitehouse1-big.png";
 import whitehouse2ImageData from "../assets/whitehouse2-big.png";
 import whitehouse3ImageData from "../assets/whitehouse3-big.png";
 
-const { abs, ceil, floor, round, max, tan } = Math;
+const { abs, ceil, floor, round, min, max, tan } = Math;
 
 const canvas: HTMLCanvasElement = document.querySelector(
   "#game"
@@ -16,7 +17,7 @@ let height = 240;
 const aspectRatio = width / height;
 const SPRITE_DIMENSIONS = 32;
 const BIG_SPRITE_DIMENSIONS = 64;
-const JUMP_VELOCITY = -30;
+const JUMP_VELOCITY = -60;
 const GRAVITY = 0.02;
 const GROUND_PERCENT = 0.5;
 const ROAD_WIDTH_PERCENT = 1.1;
@@ -34,6 +35,9 @@ rightMailboxImage.src = mailboxImageData;
 
 const goldImage = new Image();
 goldImage.src = goldImageData;
+
+const wallImage = new Image();
+wallImage.src = brickWallImageData;
 
 const wh1 = new Image();
 const wh2 = new Image();
@@ -130,7 +134,7 @@ const player: Sprite = {
   }
 };
 
-const rightMailboxes: SideSprite[] = range(1).map(n => {
+const rightMailboxes: SideSprite[] = range(0).map(n => {
   const iCoord = n + skyHeight + ((n * 40) % groundHeight);
   return {
     image: rightMailboxImage,
@@ -152,6 +156,18 @@ const golds: SideSprite[] = range(0).map(n => {
   };
 });
 
+
+const walls: SideSprite[] = range(1).map(n => {
+  const iCoord = n + skyHeight + ((n * 40) % groundHeight);
+  return {
+    image: wallImage,
+    pos: { x: randomIntBetween(-80, 80), y: 0, z: 0 },
+    rect: { x: -1, y: -1, width: -1, height: -1 },
+    i: floor(iCoord),
+    iCoord: iCoord
+  };
+});
+
 const sideSprites: SideSprite[] = [];
 
 const MAX_TEX = 2;
@@ -159,7 +175,7 @@ const MAX_TEX = 2;
 const TEX_DEN = MAX_TEX * 10;
 const TURNING_SPEED = 1.9;
 
-const SLOW_MULTIPLIER = 8;
+const SLOW_MULTIPLIER = 4;
 const normalTime = 50;
 const SIDE_SPRITE_INCREASE = 1.8;
 const SIDE_SPRIDE_SLOW_INCREASE = 1.8 / SLOW_MULTIPLIER;
@@ -194,7 +210,10 @@ function tick(t: number) {
     updatePlayerPos(player.pos.x + turningSpeed, player.pos.y);
   if (inputState.jump) jump();
 
-  player.pos.x = clamp(player.pos.x, -width / 4, width / 4);
+  //player.pos.x = clamp(player.pos.x, 0, width);
+  //console.log(player.pos.x);
+  //console.log(player.pos.x);
+  //xOffset = xCenter + player.pos.x - width/2;
   xOffset = xCenter + player.pos.x;
 
   if (player.pos.y < 0) player.vel.y = clamp(player.vel.y + GRAVITY, -1, 1);
@@ -263,6 +282,7 @@ function tick(t: number) {
     const whiteLineWidth = whiteLineWidths[i];
     const roadWidth = roadWidths[i];
     const percent = max(i / groundHeight, 0.3);
+    const totalPercent = i / height;
 
     // Set i on sprites
     const currentSprite = sprites[spriteIndex];
@@ -309,19 +329,19 @@ function tick(t: number) {
     //xOffset += ddx;
 
     //ctx.strokeStyle = funColor(index);
+    const currentRoadWidth = maxRoadWidth * totalPercent;
     ctx.strokeStyle = index < MAX_TEX / 2 ? grass1 : grass2;
     ctx.beginPath();
     ctx.moveTo(round(0), i);
-    ctx.lineTo(round(roadWidth.x1 - xOffset + xCenter), i);
+    const x1 = floor((width - currentRoadWidth) / 2 - xOffset + xCenter);
+    ctx.lineTo(x1, i);
     ctx.closePath();
     ctx.stroke();
 
+    const x2 = floor(currentRoadWidth + x1);
     ctx.beginPath();
-    ctx.moveTo(
-      round(roadWidth.x2 - sideLineWidth * percent - xOffset + xCenter),
-      i
-    );
-    ctx.lineTo(width + xOffset, i);
+    ctx.moveTo(x2, i);
+    ctx.lineTo(width, i);
     ctx.closePath();
     ctx.stroke();
 
@@ -362,19 +382,20 @@ function tick(t: number) {
   //drawImage(treeImage, sprite.pos, 0, sprite.zIndex);
   //});
 
+
   sideSprites.forEach(sprite => {
     if (sprite.i === -1) return;
+    overlaps(sprite);
+
     drawImage2(
       sprite.image,
       sprite.pos,
-      //xOffset,
       xCenter - player.pos.x,
       sprite.i,
       BIG_SPRITE_DIMENSIONS,
       false
     );
 
-    overlaps(sprite);
 
     if (sprite.i > zMap.length - 2) {
       sprite.i = skyHeight - BIG_SPRITE_DIMENSIONS;
@@ -384,6 +405,8 @@ function tick(t: number) {
     }
   });
 
+
+  //xOffset = xCenter + player.pos.x;
   drawImage2(
     player.image,
     player.pos,
@@ -401,10 +424,10 @@ function drawImage2(
   dimensions = SPRITE_DIMENSIONS,
   dontScale = true
 ) {
-  let scale = yOffset / height || 1;
+  let scale = min(yOffset / height, 1) || 1;
   scale = dontScale ? 1 : scale;
   let xScaleOffset = dimensions / 2;
-  if (!dontScale) xScaleOffset = (scale * dimensions) / 2; 
+  if (!dontScale) xScaleOffset = (scale * dimensions) / 2;
   const yScaleOffset = dontScale ? 0 : scale * dimensions;
 
   ctx.drawImage(
@@ -413,37 +436,11 @@ function drawImage2(
     0,
     dimensions,
     dimensions,
-    //floor(xOffset + pos.x - dimensions / 2 + xScaleOffset),
     floor(xOffset + pos.x - xScaleOffset),
     floor(yOffset + pos.y + pos.z + yScaleOffset),
     floor(dimensions * scale),
     floor(dimensions * scale)
   );
-}
-
-function drawImage(
-  image: HTMLImageElement,
-  pos: Vector,
-  xOffset = 0,
-  yOffset = 0
-) {
-  const scale = yOffset / height || 1;
-
-  ctx.drawImage(
-    image,
-    floor(xOffset + pos.x - SPRITE_DIMENSIONS / 2),
-    floor(yOffset + pos.y + pos.z),
-    floor(SPRITE_DIMENSIONS),
-    floor(SPRITE_DIMENSIONS)
-  );
-
-  /*  ctx.drawImage(*/
-  //image,
-  //floor(xOffset + pos.x - scale * SPRITE_DIMENSIONS / 2),
-  //floor(yOffset + pos.y + pos.z + (scale * SPRITE_DIMENSIONS) / 2),
-  //floor(SPRITE_DIMENSIONS * scale),
-  //floor(SPRITE_DIMENSIONS * scale)
-  /*);*/
 }
 
 async function load() {
@@ -453,7 +450,7 @@ async function load() {
   const image = new Image();
   image.src = imageData;
   rightMailboxes.forEach(mb => (mb.image = image));
-  sideSprites.push(...rightMailboxes, ...golds);
+  sideSprites.push(...rightMailboxes, ...golds, ...walls);
   console.log(sideSprites);
   console.log("loaded");
 }
@@ -562,7 +559,7 @@ window.addEventListener("mousemove", (e: MouseEvent) => {
   if (!pointerState.down) return;
   const xPercentage = e.offsetX / window.innerWidth;
   const x = width * xPercentage;
-  player.pos.x = x;
+  //player.pos.x = x;
 });
 
 window.addEventListener("touchmove", (e: TouchEvent) => {
@@ -578,7 +575,7 @@ window.addEventListener("mouseup", () => {
 });
 
 window.addEventListener("click", () => {
-  jump();
+  //jump();
 });
 
 window.addEventListener("resize", resize);
@@ -718,30 +715,46 @@ function cosPalette(
 }
 
 function overlaps(sprite: SideSprite) {
-  const past = sprite.i >= player.i;
-  if (!past) return;
-  let scale = sprite.i / height;
-  const r1x = player.pos.x;
-  const r2x = sprite.pos.x;
+  const scale = min(sprite.i / height, 1);
+  const r2y = sprite.i + scale * BIG_SPRITE_DIMENSIONS;
+
+  const past = r2y >= player.i;
+  if (!past) {
+    //console.log(sprite.i, player.i);
+    //return;
+  }
+
+  const playerOffset = xCenter + player.pos.x;
+  const spriteOffset = xCenter - player.pos.x;
+
+  const r1x = player.pos.x + playerOffset - BIG_SPRITE_DIMENSIONS / 2;
+  const r2x = sprite.pos.x + spriteOffset - scale * BIG_SPRITE_DIMENSIONS / 2;
   const r1w = BIG_SPRITE_DIMENSIONS;
   const r2w = BIG_SPRITE_DIMENSIONS * scale;
 
-  const r1y = player.pos.y;
-  const r2y = sprite.pos.y;
+  const r1y = player.i + player.pos.y;
   const r1h = BIG_SPRITE_DIMENSIONS;
   const r2h = BIG_SPRITE_DIMENSIONS * scale;
 
-  const h = r1x < r2x + r2w && r1x + r1w > r2x ? true : false;
-  const w = r1y < r2y + r2h && r1y + r1h > r2y ? true : false;
+  const h = (r1y < (r2y + r2h)) && ((r1y + r1h) > r2y) ? true : false;
+  const w = (r1x < (r2x + r2w)) && ((r1x + r1w) > r2x) ? true : false;
+
+  ctx.fillStyle = "red";
+  ctx.fillRect(r1x, r1y, r1w, r1h);
+
+
+
+  /*ctx.fillStyle = "green";
+  ctx.fillRect(r2x, r2y, r2w, r2h);
+
+  ctx.fillStyle = "red";
+  ctx.fillRect(r1x, r1y, r1w, r1h);*/
 
   if (h && w) {
     console.log("HIT", player.pos, sprite.pos);
+    ctx.fillStyle = "red";
+    ctx.fillRect(r1x, r1y, r1w, r1h);
   }
-
-  /*if (rect1.x < rect2.x + rect2.width &&*/
-  //rect1.x + rect1.width > rect2.x &&
-  //rect1.y < rect2.y + rect2.height &&
-  /*rect1.y + rect1.height > rect2.y) {}*/
 }
 
 function range(number: number) {
@@ -757,7 +770,8 @@ function randomIntBetween(min: number, max: number) {
 }
 
 // TODO:
-// add donkey/elephants
+// brick walls
+// screen shake
 // lights on truck
 // more usa stuff?
 // particles
@@ -767,4 +781,6 @@ function randomIntBetween(min: number, max: number) {
 // collisions
 // points
 // wheels moving
-// invincibility thing during an amazon strike?
+// invincibility thing ?
+// put zero back in the middle, collissions happen in screen space,  convert 
+// stars on top/bottom
