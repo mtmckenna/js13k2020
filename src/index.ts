@@ -6,7 +6,7 @@ import whitehouse1ImageData from "../assets/whitehouse1-big.png";
 import whitehouse2ImageData from "../assets/whitehouse2-big.png";
 import whitehouse3ImageData from "../assets/whitehouse3-big.png";
 
-const { abs, ceil, floor, round, min, max, tan } = Math;
+const { abs, ceil, floor, round, min, max, tan, sign } = Math;
 
 const canvas: HTMLCanvasElement = document.querySelector(
   "#game"
@@ -17,8 +17,10 @@ let height = 240;
 const aspectRatio = width / height;
 const SPRITE_DIMENSIONS = 32;
 const BIG_SPRITE_DIMENSIONS = 64;
-const JUMP_VELOCITY = -60;
-const GRAVITY = 0.02;
+const JUMP_VELOCITY = -5.0;
+const GRAVITY = 0.1;
+const MAX_NEGATIVE_VEL = JUMP_VELOCITY;
+const MAX_POSITIVE_VEL = 2;
 const GROUND_PERCENT = 0.5;
 const ROAD_WIDTH_PERCENT = 1.1;
 const ZERO_POS = { x: 0, y: 0, z: 0 };
@@ -173,7 +175,8 @@ const sideSprites: SideSprite[] = [];
 const MAX_TEX = 2;
 //const MAX_TEX = 5;
 const TEX_DEN = MAX_TEX * 10;
-const TURNING_SPEED = 1.9;
+//const TURNING_SPEED = 1.9;
+const TURNING_SPEED = 1.4;
 
 const SLOW_MULTIPLIER = 4;
 const normalTime = 50;
@@ -195,10 +198,14 @@ function tick(t: number) {
 
   //const jumping = player.pos.y < 0 && player.vel.y > 0;
   const jumping = player.pos.y < 0;
-  const divisor = jumping ? jumpTime : normalTime;
-  const turningSpeed = jumping
+  //const divisor = jumping ? jumpTime : normalTime;
+  const divisor = normalTime;
+  const turningSpeed = TURNING_SPEED;
+
+  /*const turningSpeed = jumping
     ? TURNING_SPEED / SLOW_MULTIPLIER
-    : TURNING_SPEED;
+    : TURNING_SPEED;*/
+ 
   gameTime += 10 / divisor;
 
   realTime = t;
@@ -216,14 +223,14 @@ function tick(t: number) {
   //xOffset = xCenter + player.pos.x - width/2;
   xOffset = xCenter + player.pos.x;
 
-  if (player.pos.y < 0) player.vel.y = clamp(player.vel.y + GRAVITY, -1, 1);
+  if (player.pos.y < 0) player.vel.y = clamp(player.vel.y + GRAVITY, MAX_NEGATIVE_VEL, MAX_POSITIVE_VEL);
 
   if (player.pos.y > 0) {
     player.vel.y = 0;
     player.pos.y = 0;
   }
 
-  player.pos.y += player.vel.y;
+  player.pos.y += clamp(player.vel.y, MAX_NEGATIVE_VEL, MAX_POSITIVE_VEL);
 
   // Sky
   ctx.fillStyle = sky;
@@ -264,7 +271,8 @@ function tick(t: number) {
   //movingSegment.i -= .5;
 
   sideSprites.forEach(sprite => {
-    const increase = jumping ? SIDE_SPRIDE_SLOW_INCREASE : SIDE_SPRITE_INCREASE;
+    //const increase = jumping ? SIDE_SPRIDE_SLOW_INCREASE : SIDE_SPRITE_INCREASE;
+    const increase = SIDE_SPRITE_INCREASE;
     sprite.iCoord = clamp(
       sprite.iCoord + increase,
       skyHeight - SPRITE_DIMENSIONS * 1.5,
@@ -721,7 +729,7 @@ function overlaps(sprite: SideSprite) {
   const past = r2y >= player.i;
   if (!past) {
     //console.log(sprite.i, player.i);
-    //return;
+    return;
   }
 
   const playerOffset = xCenter + player.pos.x;
@@ -738,10 +746,6 @@ function overlaps(sprite: SideSprite) {
 
   const h = (r1y < (r2y + r2h)) && ((r1y + r1h) > r2y) ? true : false;
   const w = (r1x < (r2x + r2w)) && ((r1x + r1w) > r2x) ? true : false;
-
-  ctx.fillStyle = "red";
-  ctx.fillRect(r1x, r1y, r1w, r1h);
-
 
 
   /*ctx.fillStyle = "green";
