@@ -262,7 +262,9 @@ const letters = {
         ]
     };
 
-export function drawText(canvas: HTMLCanvasElement, string: string, startX: number = 0, startY: number = 0, size: number = 1, color: string = "#000") {
+const FONT_UNIT_HEIGHT = 5;
+export function drawText(canvas: HTMLCanvasElement, string: string, startX: number = 0, startY: number = 0, pixelHeight: number = 1, color: string = "#000") {
+	const size = pixelHeight / FONT_UNIT_HEIGHT;
 	const context = canvas.getContext("2d");
 
 	var needed = [];

@@ -11,7 +11,11 @@ import city1ImageData from "../assets/city1-big.png";
 import city2ImageData from "../assets/city2-big.png";
 import city3ImageData from "../assets/city3-big.png";
 
-
+let gameVars: GameVars = {
+	funding: 100,
+	timeLeft: 90,
+	ballots : 0
+};
 
 const { floor, round, min, max } = Math;
 
@@ -31,6 +35,8 @@ const MAX_POSITIVE_VEL = -JUMP_VELOCITY;
 const GROUND_PERCENT = 0.5;
 const ROAD_WIDTH_PERCENT = 1.1;
 const ZERO_POS = { x: 0, y: 0, z: 0 };
+const UI_PADDING = 4;
+const FONT_SIZE = 20;
 //const d = 1/tan(60/2);
 
 canvas.height = height;
@@ -429,9 +435,15 @@ function tick(t: number) {
     BIG_SPRITE_DIMENSIONS
   );
 
-  drawText(canvas, 'FUNDING', 2, 2, 4);
-  drawText(canvas, '000', 2, 26, 4);
-  drawText(canvas, '320', 274, 2, 4);
+	drawFundingMeter();
+  drawText(canvas, '000', UI_PADDING, UI_PADDING, FONT_SIZE);
+  drawText(canvas, '320', width - 3 * (FONT_SIZE*.8), UI_PADDING, FONT_SIZE);
+}
+
+function drawFundingMeter() {
+	ctx.fillStyle = grass2;
+	ctx.fillRect(UI_PADDING, UI_PADDING * 2 + FONT_SIZE, width - UI_PADDING * 2, FONT_SIZE);
+  drawText(canvas, 'FUNDING', UI_PADDING, UI_PADDING * 2 + FONT_SIZE, FONT_SIZE);
 }
 
 function drawImage2(
@@ -662,6 +674,12 @@ interface PointerState {
   y: number;
 }
 
+interface GameVars {
+	ballots: number;
+	funding: number;
+	timeLeft: number;
+}
+
 //interface RoadChunk {
 //pos: Vector;
 //i: number;
@@ -737,10 +755,7 @@ function overlaps(sprite: SideSprite) {
   const r2y = sprite.i + scale * BIG_SPRITE_DIMENSIONS;
 
   const past = r2y >= player.i;
-  if (!past) {
-    //console.log(sprite.i, player.i);
-    return;
-  }
+  if (!past) return;
 
   const playerOffset = xCenter + player.pos.x;
   const spriteOffset = xCenter - player.pos.x;
