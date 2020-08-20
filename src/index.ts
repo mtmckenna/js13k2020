@@ -7,6 +7,11 @@ import mailboxImageData from "../assets/mailbox-big.png";
 import whitehouse1ImageData from "../assets/whitehouse1-big.png";
 import whitehouse2ImageData from "../assets/whitehouse2-big.png";
 import whitehouse3ImageData from "../assets/whitehouse3-big.png";
+import city1ImageData from "../assets/city1-big.png";
+import city2ImageData from "../assets/city2-big.png";
+import city3ImageData from "../assets/city3-big.png";
+
+
 
 const { floor, round, min, max } = Math;
 
@@ -46,9 +51,9 @@ wallImage.src = brickWallImageData;
 const wh1 = new Image();
 const wh2 = new Image();
 const wh3 = new Image();
-wh1.src = whitehouse1ImageData;
-wh2.src = whitehouse2ImageData;
-wh3.src = whitehouse3ImageData;
+wh1.src = city1ImageData;
+wh2.src = city2ImageData;
+wh3.src = city3ImageData;
 
 const whStartPos =
   width / 2 - (BIG_SPRITE_DIMENSIONS * 3) / 2 + BIG_SPRITE_DIMENSIONS / 2;
@@ -416,7 +421,6 @@ function tick(t: number) {
   });
 
 
-  //xOffset = xCenter + player.pos.x;
   drawImage2(
     player.image,
     player.pos,
@@ -426,8 +430,8 @@ function tick(t: number) {
   );
 
   drawText(canvas, 'FUNDING', 2, 2, 4);
+  drawText(canvas, '000', 2, 26, 4);
   drawText(canvas, '320', 274, 2, 4);
-  //renderFont("funding", 100, 200, 20, "red");
 }
 
 function drawImage2(
