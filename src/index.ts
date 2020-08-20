@@ -1,3 +1,5 @@
+import { drawText } from "./font";
+
 import carImageData from "../assets/mailtruck-big.png";
 import brickWallImageData from "../assets/brick-wall.png";
 import goldImageData from "../assets/gold.png";
@@ -6,7 +8,7 @@ import whitehouse1ImageData from "../assets/whitehouse1-big.png";
 import whitehouse2ImageData from "../assets/whitehouse2-big.png";
 import whitehouse3ImageData from "../assets/whitehouse3-big.png";
 
-const { abs, ceil, floor, round, min, max, tan, sign } = Math;
+const { floor, round, min, max } = Math;
 
 const canvas: HTMLCanvasElement = document.querySelector(
   "#game"
@@ -422,6 +424,10 @@ function tick(t: number) {
     player.i,
     BIG_SPRITE_DIMENSIONS
   );
+
+  drawText(canvas, 'FUNDING', 2, 2, 4);
+  drawText(canvas, '320', 274, 2, 4);
+  //renderFont("funding", 100, 200, 20, "red");
 }
 
 function drawImage2(
@@ -755,7 +761,7 @@ function overlaps(sprite: SideSprite) {
   ctx.fillRect(r1x, r1y, r1w, r1h);*/
 
   if (h && w) {
-    console.log("HIT", player.pos, sprite.pos);
+    //console.log("HIT", player.pos, sprite.pos);
     ctx.fillStyle = "red";
     ctx.fillRect(r1x, r1y, r1w, r1h);
   }
