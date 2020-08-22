@@ -12,11 +12,11 @@ import city2ImageData from "../assets/city2-big.png";
 import city3ImageData from "../assets/city3-big.png";
 
 let gameVars: GameVars = {
-	funding: 100,
-	timeLeft: 90,
-	ballots : 0,
-	lastHitAt: null,
-	lastFlashedAt: null
+  funding: 100,
+  timeLeft: 90,
+  ballots: 0,
+  lastHitAt: null,
+  lastFlashedAt: null
 };
 
 const { floor, round, min, max } = Math;
@@ -148,7 +148,7 @@ const player: Sprite = {
   vel: { x: 0, y: 0, z: 0 },
   i: playerI,
   iCoord: playerI,
-	alpha: 1,
+  alpha: 1,
   rect: {
     x: -1,
     y: -1,
@@ -157,7 +157,7 @@ const player: Sprite = {
   }
 };
 
-const rightMailboxes: SideSprite[] = range(0).map(n => {
+const rightMailboxes: SideSprite[] = range(3).map(n => {
   const iCoord = n + skyHeight + ((n * 40) % groundHeight);
   return {
     image: rightMailboxImage,
@@ -165,7 +165,7 @@ const rightMailboxes: SideSprite[] = range(0).map(n => {
     rect: { x: -1, y: -1, width: -1, height: -1 },
     i: floor(iCoord),
     iCoord: iCoord,
-		alpha: 1
+    alpha: 1
   };
 });
 
@@ -177,10 +177,9 @@ const golds: SideSprite[] = range(0).map(n => {
     rect: { x: -1, y: -1, width: -1, height: -1 },
     i: floor(iCoord),
     iCoord: iCoord,
-		alpha: 1
+    alpha: 1
   };
 });
-
 
 const walls: SideSprite[] = range(1).map(n => {
   const iCoord = n + skyHeight + ((n * 40) % groundHeight);
@@ -190,7 +189,7 @@ const walls: SideSprite[] = range(1).map(n => {
     rect: { x: -1, y: -1, width: -1, height: -1 },
     i: floor(iCoord),
     iCoord: iCoord,
-		alpha: 1
+    alpha: 1
   };
 });
 
@@ -214,7 +213,7 @@ let xOffset = 0;
 //const zHorizon = zMap[skyHeight + 2];
 //const zBottom = zMap[zMap.length - 1];
 function tick(t: number) {
-	ctx.globalAlpha = 1.0;
+  ctx.globalAlpha = 1.0;
   if (lastTime === -1) {
     lastTime = t;
     requestAnimationFrame(tick);
@@ -228,7 +227,7 @@ function tick(t: number) {
   /*const turningSpeed = jumping
     ? TURNING_SPEED / SLOW_MULTIPLIER
     : TURNING_SPEED;*/
- 
+
   gameTime += 10 / divisor;
 
   realTime = t;
@@ -242,7 +241,12 @@ function tick(t: number) {
 
   xOffset = xCenter + player.pos.x;
 
-  if (player.pos.y < 0) player.vel.y = clamp(player.vel.y + GRAVITY, MAX_NEGATIVE_VEL, MAX_POSITIVE_VEL);
+  if (player.pos.y < 0)
+    player.vel.y = clamp(
+      player.vel.y + GRAVITY,
+      MAX_NEGATIVE_VEL,
+      MAX_POSITIVE_VEL
+    );
 
   if (player.pos.y > 0) {
     player.vel.y = 0;
@@ -251,38 +255,9 @@ function tick(t: number) {
 
   player.pos.y += clamp(player.vel.y, MAX_NEGATIVE_VEL, MAX_POSITIVE_VEL);
 
-  // Sky
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, width, height);
-
-  // Ground
-  ctx.fillStyle = road1;
-  ctx.fillRect(0, skyHeight, width, groundHeight);
-
-  // Draw city
-  const whOffset = xCenter - xOffset;
-  drawImage(
-    wh1,
-    ZERO_POS,
-    whOffset + whStartPos,
-    horizonI - BIG_SPRITE_DIMENSIONS,
-    BIG_SPRITE_DIMENSIONS
-  );
-  drawImage(
-    wh2,
-    ZERO_POS,
-    whOffset + whStartPos + BIG_SPRITE_DIMENSIONS,
-    horizonI - BIG_SPRITE_DIMENSIONS,
-    BIG_SPRITE_DIMENSIONS
-  );
-  drawImage(
-    wh3,
-    ZERO_POS,
-    whOffset + whStartPos + 2 * BIG_SPRITE_DIMENSIONS,
-    horizonI - BIG_SPRITE_DIMENSIONS,
-    BIG_SPRITE_DIMENSIONS
-  );
-
+  drawSky();
+  drawGround();
+  drawCity();
   let textureCoord = 0;
   let spriteIndex = 0;
   //let dx = 0;
@@ -407,12 +382,11 @@ function tick(t: number) {
   //drawImage(treeImage, sprite.pos, 0, sprite.zIndex);
   //});
 
-
   sideSprites.forEach(sprite => {
     if (sprite.i === -1) return;
     const overlapping = overlaps(sprite);
 
-		if (overlapping) handleOverlap(sprite);
+    if (overlapping) handleOverlap(sprite);
 
     drawImage(
       sprite.image,
@@ -423,23 +397,22 @@ function tick(t: number) {
       false
     );
 
-
     if (sprite.i > zMap.length - 2) {
       sprite.i = skyHeight - BIG_SPRITE_DIMENSIONS;
-      //sprite.pos.x = randomIntBetween(-120, 120);
-      sprite.pos.x = 0;
+      sprite.pos.x = randomIntBetween(-120, 120);
+      //sprite.pos.x = 0;
       sprite.iCoord = sprite.i;
     }
   });
 
-	drawTruck();
-	drawUi();
+  drawTruck();
+  drawUi();
 }
 
 function handleOverlap(sprite: SideSprite) {
   if (inGracePeriod()) return;
   gameVars.lastHitAt = gameTime;
-  gameVars.funding -= FUNDING_HIT_AMOUNT;	
+  gameVars.funding -= FUNDING_HIT_AMOUNT;
 }
 
 function flashTruck() {
@@ -448,8 +421,8 @@ function flashTruck() {
     return;
   }
 
-	if (flashedRecently()) return;
-  const alpha = player.alpha === 1 ? .5 : 1;
+  if (flashedRecently()) return;
+  const alpha = player.alpha === 1 ? 0.5 : 1;
   gameVars.lastFlashedAt = gameTime;
   player.alpha = alpha;
 }
@@ -459,41 +432,76 @@ function inGracePeriod() {
 }
 
 function flashedRecently() {
- return timeSinceLastFlash() < FLASH_TIME;
+  return timeSinceLastFlash() < FLASH_TIME;
 }
 
 function timeSinceLastHit() {
-	return gameTime - gameVars.lastHitAt;
+  return gameTime - gameVars.lastHitAt;
 }
 
 function timeSinceLastFlash() {
-	return gameTime - gameVars.lastFlashedAt;
+  return gameTime - gameVars.lastFlashedAt;
 }
 
 function drawTruck() {
-	flashTruck();
+  flashTruck();
   drawImage(
     player.image,
     player.pos,
     xOffset,
     player.i,
     BIG_SPRITE_DIMENSIONS,
-		true,
-		player.alpha
+    true,
+    player.alpha
+  );
+}
+
+function drawSky() {
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, width, height);
+}
+
+function drawGround() {
+  ctx.fillStyle = road1;
+  ctx.fillRect(0, skyHeight, width, groundHeight);
+}
+
+function drawCity() {
+  const whOffset = xCenter - xOffset;
+  drawImage(
+    wh1,
+    ZERO_POS,
+    whOffset + whStartPos,
+    horizonI - BIG_SPRITE_DIMENSIONS,
+    BIG_SPRITE_DIMENSIONS
+  );
+  drawImage(
+    wh2,
+    ZERO_POS,
+    whOffset + whStartPos + BIG_SPRITE_DIMENSIONS,
+    horizonI - BIG_SPRITE_DIMENSIONS,
+    BIG_SPRITE_DIMENSIONS
+  );
+  drawImage(
+    wh3,
+    ZERO_POS,
+    whOffset + whStartPos + 2 * BIG_SPRITE_DIMENSIONS,
+    horizonI - BIG_SPRITE_DIMENSIONS,
+    BIG_SPRITE_DIMENSIONS
   );
 }
 
 function drawUi() {
-  drawText(canvas, '000', UI_PADDING, UI_PADDING, FONT_SIZE);
-  drawText(canvas, '320', width - 3 * (FONT_SIZE*.8), UI_PADDING, FONT_SIZE);
-	drawFundingMeter();
+  drawText(canvas, "000", UI_PADDING, UI_PADDING, FONT_SIZE);
+  drawText(canvas, "320", width - 3 * (FONT_SIZE * 0.8), UI_PADDING, FONT_SIZE);
+  drawFundingMeter();
 }
 
 function drawFundingMeter() {
-	ctx.fillStyle = grass2;
-	const width =  floor(MAX_FUNDING_BAR * gameVars.funding / 100);
-	ctx.fillRect(UI_PADDING, SECOND_ROW_Y, width, FONT_SIZE);
-  drawText(canvas, 'FUNDING', UI_PADDING, SECOND_ROW_Y, FONT_SIZE);
+  ctx.fillStyle = grass2;
+  const width = floor((MAX_FUNDING_BAR * gameVars.funding) / 100);
+  ctx.fillRect(UI_PADDING, SECOND_ROW_Y, width, FONT_SIZE);
+  drawText(canvas, "FUNDING", UI_PADDING, SECOND_ROW_Y, FONT_SIZE);
 }
 
 function drawImage(
@@ -503,7 +511,7 @@ function drawImage(
   yOffset = 0,
   dimensions = SPRITE_DIMENSIONS,
   dontScale = true,
-	alpha = 1
+  alpha = 1
 ) {
   let scale = min(yOffset / height, 1) || 1;
   scale = dontScale ? 1 : scale;
@@ -511,9 +519,8 @@ function drawImage(
   if (!dontScale) xScaleOffset = (scale * dimensions) / 2;
   const yScaleOffset = dontScale ? 0 : scale * dimensions;
 
-
-	const oldAlpha = ctx.globalAlpha;
-	ctx.globalAlpha = alpha;
+  const oldAlpha = ctx.globalAlpha;
+  ctx.globalAlpha = alpha;
   ctx.drawImage(
     image,
     0,
@@ -526,7 +533,7 @@ function drawImage(
     floor(dimensions * scale)
   );
 
-	ctx.globalAlpha = oldAlpha;
+  ctx.globalAlpha = oldAlpha;
 }
 
 async function load() {
@@ -699,7 +706,7 @@ interface Sprite {
   rect: Rect;
   i: number;
   iCoord: number;
-	alpha: number;
+  alpha: number;
 }
 
 interface SideSprite {
@@ -708,7 +715,7 @@ interface SideSprite {
   rect: Rect;
   i: number;
   iCoord: number;
-	alpha: number;
+  alpha: number;
 }
 
 interface Vector {
@@ -733,11 +740,11 @@ interface PointerState {
 }
 
 interface GameVars {
-	ballots: number;
-	funding: number;
-	timeLeft: number;
-	lastHitAt: number;
-	lastFlashedAt: number;
+  ballots: number;
+  funding: number;
+  timeLeft: number;
+  lastHitAt: number;
+  lastFlashedAt: number;
 }
 
 //interface RoadChunk {
@@ -821,7 +828,7 @@ function overlaps(sprite: SideSprite) {
   const spriteOffset = xCenter - player.pos.x;
 
   const r1x = player.pos.x + playerOffset - BIG_SPRITE_DIMENSIONS / 2;
-  const r2x = sprite.pos.x + spriteOffset - scale * BIG_SPRITE_DIMENSIONS / 2;
+  const r2x = sprite.pos.x + spriteOffset - (scale * BIG_SPRITE_DIMENSIONS) / 2;
   const r1w = BIG_SPRITE_DIMENSIONS;
   const r2w = BIG_SPRITE_DIMENSIONS * scale;
 
@@ -829,9 +836,8 @@ function overlaps(sprite: SideSprite) {
   const r1h = BIG_SPRITE_DIMENSIONS;
   const r2h = BIG_SPRITE_DIMENSIONS * scale;
 
-  const h = (r1y < (r2y + r2h)) && ((r1y + r1h) > r2y) ? true : false;
-  const w = (r1x < (r2x + r2w)) && ((r1x + r1w) > r2x) ? true : false;
-
+  const h = r1y < r2y + r2h && r1y + r1h > r2y ? true : false;
+  const w = r1x < r2x + r2w && r1x + r1w > r2x ? true : false;
 
   /*ctx.fillStyle = "green";
   ctx.fillRect(r2x, r2y, r2w, r2h);
@@ -842,10 +848,10 @@ function overlaps(sprite: SideSprite) {
   if (h && w) {
     //ctx.fillStyle = "red";
     //ctx.fillRect(r1x, r1y, r1w, r1h);
-		return true;
+    return true;
   } else {
-		return false;
-	}
+    return false;
+  }
 }
 
 function range(number: number) {
@@ -861,17 +867,19 @@ function randomIntBetween(min: number, max: number) {
 }
 
 // TODO:
+// parrallax
 // brick walls
 // screen shake
 // lights on truck
 // more usa stuff?
 // particles
 // clouds
-// flag
+// title screen
+// sounds
 // meter
 // collisions
 // points
 // wheels moving
 // invincibility thing ?
-// put zero back in the middle, collissions happen in screen space,  convert 
+// put zero back in the middle, collissions happen in screen space,  convert
 // stars on top/bottom
