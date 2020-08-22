@@ -20,7 +20,7 @@ let gameVars: GameVars = {
   lastTimeDecrementedAt: null
 };
 
-const { floor, round, min, max } = Math;
+const { random, floor, round, min, max } = Math;
 
 const canvas: HTMLCanvasElement = document.querySelector(
   "#game"
@@ -173,7 +173,11 @@ const rightMailboxes: SideSprite[] = range(3).map(n => {
     i: floor(iCoord),
     iCoord: iCoord,
     alpha: 1,
-    name: "mailbox"
+    name: "mailbox",
+    percentChanceOfSpawning: .02,
+    minTimeOffScreen: 1,
+    lastOnScreenAt: null, 
+    active: false
   };
 });
 
@@ -186,7 +190,11 @@ const golds: SideSprite[] = range(1).map(n => {
     i: floor(iCoord),
     iCoord: iCoord,
     alpha: 1,
-    name: "gold"
+    name: "gold",
+    percentChanceOfSpawning: .01,
+    minTimeOffScreen: 10,
+    lastOnScreenAt: null,
+    active: false
   };
 });
 
@@ -199,7 +207,11 @@ const walls: SideSprite[] = range(1).map(n => {
     i: floor(iCoord),
     iCoord: iCoord,
     alpha: 1,
-    name: "wall"
+    name: "wall",
+    percentChanceOfSpawning: .05,
+    minTimeOffScreen: 5,
+    lastOnScreenAt: null,
+    active: false
   };
 });
 
@@ -370,16 +382,15 @@ function tick(t: number) {
     textureCoord %= MAX_TEX;
   }
 
-  //sprites.forEach(sprite => {
-  //if (sprite.zIndex === -1) return;
-  ////console.log(sprite.zIndex);
-  //drawImage(treeImage, sprite.pos, 0, sprite.zIndex);
-  //});
-
   sideSprites.forEach(sprite => {
     if (sprite.i === -1) return;
-    const overlapping = overlaps(sprite);
+    if (!sprite.active) {
+      if (!spriteReadyToBeOnScreen(sprite)) return;
+      if (!isLucky(sprite.percentChanceOfSpawning)) return;
+      activateSprite(sprite);
+    }
 
+    const overlapping = overlaps(sprite);
     if (overlapping) handleOverlap(sprite);
 
     drawImage(
@@ -392,10 +403,12 @@ function tick(t: number) {
     );
 
     if (sprite.i > zMap.length - 2) {
-      sprite.i = skyHeight - BIG_SPRITE_DIMENSIONS;
-      sprite.pos.x = randomIntBetween(-120, 120);
+      //sprite.i = skyHeight - BIG_SPRITE_DIMENSIONS;
+      //sprite.pos.x = randomIntBetween(-120, 120);
       //sprite.pos.x = 0;
-      sprite.iCoord = sprite.i;
+      //sprite.iCoord = sprite.i;
+      sprite.active = false;
+      sprite.lastOnScreenAt = gameTime;
     }
   });
 
@@ -458,6 +471,10 @@ function handleMailboxOverlap() {
   gameVars.ballots += min(MAILBOX_HIT_AMOUNT, 999);
 }
 
+function isLucky(percentChance: number) {
+  return random() < percentChance;
+}
+
 function flashTruck() {
   if (!inGracePeriod()) {
     player.alpha = 1;
@@ -470,10 +487,17 @@ function flashTruck() {
   player.alpha = alpha;
 }
 
+function activateSprite(sprite: SideSprite) {
+  sprite.active = true;
+  sprite.i = skyHeight - BIG_SPRITE_DIMENSIONS;
+  sprite.iCoord = sprite.i;
+  const m = 2.2;
+  sprite.pos.x = randomIntBetween(-PLAYER_EDGE * m, PLAYER_EDGE * m);
+}
+
 function readyToDecrementTime() {
  return timeSinceLastTimeDecrement() > GAME_UPDATE_TIME;
 }
-
 
 function inGracePeriod() {
   return timeSinceLastHit() < HIT_TIME;
@@ -493,6 +517,14 @@ function timeSinceLastHit() {
 
 function timeSinceLastFlash() {
   return gameTime - gameVars.lastFlashedAt;
+}
+
+function spriteReadyToBeOnScreen(sprite: SideSprite) {
+  return timeSinceSpriteOnScreen(sprite) > sprite.minTimeOffScreen;
+}
+
+function timeSinceSpriteOnScreen(sprite: SideSprite)  {
+  return gameTime - sprite.lastOnScreenAt;
 }
 
 function drawTruck() {
@@ -773,6 +805,10 @@ interface SideSprite {
   iCoord: number;
   alpha: number;
   name: string;
+  lastOnScreenAt: number;
+  minTimeOffScreen: number;
+  percentChanceOfSpawning: number;
+  active: boolean;
 }
 
 interface Vector {
