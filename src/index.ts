@@ -16,7 +16,8 @@ let gameVars: GameVars = {
   timeLeft: 90,
   ballots: 0,
   lastHitAt: null,
-  lastFlashedAt: null
+  lastFlashedAt: null,
+  lastTimeDecrementedAt: null
 };
 
 const { floor, round, min, max } = Math;
@@ -46,6 +47,7 @@ const FLASH_TIME = 1.5;
 const FUNDING_HIT_AMOUNT = 5;
 const MAILBOX_HIT_AMOUNT = 5;
 const PLAYER_EDGE = width / 4;
+const GAME_UPDATE_TIME = 10;
 //const d = 1/tan(60/2);
 
 const OVLERLAP_MAP = {
@@ -142,13 +144,10 @@ for (let i = 0; i < zMap.length; i++) {
 const horizonI = skyHeight;
 const xCenter = floor(width / 2);
 
-const logBox: HTMLElement = document.querySelector("#log");
+//const logBox: HTMLElement = document.querySelector("#log");
 console.log(zMap);
 
-let playerIForGround30 = 40;
-let playerIForGround45 = 70;
 let playerIForGround50 = 50;
-let playerIForGround90 = 170;
 const playerI = playerIForGround50 + horizonI;
 const player: Sprite = {
   image: carImage,
@@ -240,6 +239,10 @@ function tick(t: number) {
     : TURNING_SPEED;*/
 
   gameTime += 10 / divisor;
+
+  if (readyToDecrementTime()) {
+    updateTimeLeft();
+  }
 
   realTime = t;
   requestAnimationFrame(tick);
@@ -400,17 +403,21 @@ function tick(t: number) {
   drawUi();
 }
 
+function updateTimeLeft() {
+  gameVars.timeLeft = max(gameVars.timeLeft - 1, 0);
+  gameVars.lastTimeDecrementedAt = gameTime;
+}
+
 function handlePlayerInput(turningSpeed: number) {
   if (inputState.left) {
-    //updatePlayerPos(player.pos.x - turningSpeed, player.pos.y);
-    player.pos.x = clamp(player.pos.x - turningSpeed, -PLAYER_EDGE, PLAYER_EDGE);
+    player.pos.x -= turningSpeed;
   }
+
   if (inputState.right) {
-    player.pos.x = clamp(player.pos.x + turningSpeed, -PLAYER_EDGE, PLAYER_EDGE);
-    //updatePlayerPos(player.pos.x + turningSpeed, player.pos.y);
+    player.pos.x += turningSpeed;
   }
+
   if (inputState.jump) jump();
-  xOffset = xCenter + player.pos.x;
 
   if (player.pos.y < 0)
     player.vel.y = clamp(
@@ -425,6 +432,11 @@ function handlePlayerInput(turningSpeed: number) {
   }
 
   player.pos.y += clamp(player.vel.y, MAX_NEGATIVE_VEL, MAX_POSITIVE_VEL);
+  player.pos.x = clamp(player.pos.x, -PLAYER_EDGE, PLAYER_EDGE);
+  xOffset = xCenter + player.pos.x;
+  
+  //if (logBox.innerText.length >= 1000) logBox.innerText = "";
+  //logBox.innerText = `${player.pos.x}\n${logBox.innerText}`;
   updatePlayerPos(player.pos.x, player.pos.y);
 }
 
@@ -434,19 +446,16 @@ function handleOverlap(sprite: SideSprite) {
 }
 
 function handleWallOverlap() {
-  console.log("wall");
   gameVars.lastHitAt = gameTime;
-  gameVars.funding -= FUNDING_HIT_AMOUNT;
+  gameVars.funding = max(gameVars.funding - FUNDING_HIT_AMOUNT, 0);
 }
 
 function handleGoldOverlap() {
-  console.log("gold");
-  gameVars.funding += FUNDING_HIT_AMOUNT;
+  gameVars.funding = min(gameVars.funding + FUNDING_HIT_AMOUNT, 100);
 }
 
 function handleMailboxOverlap() {
-  console.log("mail");
-  gameVars.funding += MAILBOX_HIT_AMOUNT;
+  gameVars.ballots += min(MAILBOX_HIT_AMOUNT, 999);
 }
 
 function flashTruck() {
@@ -461,12 +470,21 @@ function flashTruck() {
   player.alpha = alpha;
 }
 
+function readyToDecrementTime() {
+ return timeSinceLastTimeDecrement() > GAME_UPDATE_TIME;
+}
+
+
 function inGracePeriod() {
   return timeSinceLastHit() < HIT_TIME;
 }
 
 function flashedRecently() {
   return timeSinceLastFlash() < FLASH_TIME;
+}
+
+function timeSinceLastTimeDecrement() {
+  return gameTime - gameVars.lastTimeDecrementedAt;
 }
 
 function timeSinceLastHit() {
@@ -526,9 +544,13 @@ function drawCity() {
 }
 
 function drawUi() {
-  drawText(canvas, "000", UI_PADDING, UI_PADDING, FONT_SIZE);
-  drawText(canvas, "320", width - 3 * (FONT_SIZE * 0.8), UI_PADDING, FONT_SIZE);
+  drawText(canvas, pad(gameVars.ballots), UI_PADDING, UI_PADDING, FONT_SIZE);
+  drawText(canvas, pad(gameVars.timeLeft), width - 3 * (FONT_SIZE * 0.8), UI_PADDING, FONT_SIZE);
   drawFundingMeter();
+}
+
+function pad(num: number) {
+  return `000${num}`.slice(-3);
 }
 
 function drawFundingMeter() {
@@ -780,6 +802,7 @@ interface GameVars {
   timeLeft: number;
   lastHitAt: number;
   lastFlashedAt: number;
+  lastTimeDecrementedAt: number;
 }
 
 //interface RoadChunk {
