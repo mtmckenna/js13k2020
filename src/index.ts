@@ -390,8 +390,7 @@ function tick(t: number) {
       activateSprite(sprite);
     }
 
-    const overlapping = overlaps(sprite);
-    if (overlapping) handleOverlap(sprite);
+    if (overlaps(sprite)) handleOverlap(sprite);
 
     drawImage(
       sprite.image,
@@ -403,12 +402,7 @@ function tick(t: number) {
     );
 
     if (sprite.i > zMap.length - 2) {
-      //sprite.i = skyHeight - BIG_SPRITE_DIMENSIONS;
-      //sprite.pos.x = randomIntBetween(-120, 120);
-      //sprite.pos.x = 0;
-      //sprite.iCoord = sprite.i;
-      sprite.active = false;
-      sprite.lastOnScreenAt = gameTime;
+      deactivateSprite(sprite);
     }
   });
 
@@ -456,6 +450,7 @@ function handlePlayerInput(turningSpeed: number) {
 function handleOverlap(sprite: SideSprite) {
   if (inGracePeriod()) return;
   if (OVLERLAP_MAP[sprite.name]) OVLERLAP_MAP[sprite.name]();
+  deactivateSprite(sprite);
 }
 
 function handleWallOverlap() {
@@ -485,6 +480,11 @@ function flashTruck() {
   const alpha = player.alpha === 1 ? 0.5 : 1;
   gameVars.lastFlashedAt = gameTime;
   player.alpha = alpha;
+}
+
+function deactivateSprite(sprite: SideSprite) {
+  sprite.active = false;
+  sprite.lastOnScreenAt = gameTime;
 }
 
 function activateSprite(sprite: SideSprite) {
