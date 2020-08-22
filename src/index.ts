@@ -18,9 +18,10 @@ let gameVars: GameVars = {
   lastHitAt: null,
   lastFlashedAt: null,
   lastTimeDecrementedAt: null
+
 };
 
-const { random, floor, round, min, max } = Math;
+const { abs, random, floor, round, min, max, sin, sign } = Math;
 
 const canvas: HTMLCanvasElement = document.querySelector(
   "#game"
@@ -28,6 +29,7 @@ const canvas: HTMLCanvasElement = document.querySelector(
 const ctx: CanvasRenderingContext2D = canvas.getContext("2d");
 let width = 320;
 let height = 240;
+const EPSILON = .01;
 const aspectRatio = width / height;
 const SPRITE_DIMENSIONS = 32;
 const BIG_SPRITE_DIMENSIONS = 64;
@@ -48,12 +50,19 @@ const FUNDING_HIT_AMOUNT = 5;
 const MAILBOX_HIT_AMOUNT = 5;
 const PLAYER_EDGE = width / 4;
 const GAME_UPDATE_TIME = 10;
+const SCREEN_SHAKE_AMOUNT = 50;
+const SCREEN_SHAKE_DAMPEN = .9;
 //const d = 1/tan(60/2);
 
 const OVLERLAP_MAP = {
   wall: handleWallOverlap,
   gold: handleGoldOverlap,
   mailbox: handleMailboxOverlap
+};
+
+const screenShake = {
+  x: 0,
+  y: 0
 };
 
 canvas.height = height;
@@ -127,19 +136,19 @@ for (let i = 0; i < zMap.length; i++) {
   whiteLineWidths.push({ x1: startX, x2: startX + width });
 }
 
-const roadSegments: number[] = [];
-let count = 0;
-let sign = 1;
-for (let i = 0; i < zMap.length; i++) {
-  if (count === 10) {
-    sign *= -1;
-    count = 0;
-  }
+//const roadSegments: number[] = [];
+//let count = 0;
+//let sign = 1;
+//for (let i = 0; i < zMap.length; i++) {
+  //if (count === 10) {
+    //sign *= -1;
+    //count = 0;
+  //}
 
-  count++;
-  const val = 0.01 * sign;
-  roadSegments.push(val);
-}
+  //count++;
+  //const val = 0.01 * sign;
+  //roadSegments.push(val);
+//}
 
 const horizonI = skyHeight;
 const xCenter = floor(width / 2);
@@ -164,7 +173,7 @@ const player: Sprite = {
   }
 };
 
-const rightMailboxes: SideSprite[] = range(3).map(n => {
+const rightMailboxes: SideSprite[] = range(2).map(n => {
   const iCoord = n + skyHeight + ((n * 40) % groundHeight);
   return {
     image: rightMailboxImage,
@@ -181,7 +190,7 @@ const rightMailboxes: SideSprite[] = range(3).map(n => {
   };
 });
 
-const golds: SideSprite[] = range(1).map(n => {
+const golds: SideSprite[] = range(0).map(n => {
   const iCoord = n + skyHeight + ((n * 40) % groundHeight);
   return {
     image: goldImage,
@@ -252,15 +261,14 @@ function tick(t: number) {
 
   gameTime += 10 / divisor;
 
-  if (readyToDecrementTime()) {
-    updateTimeLeft();
-  }
+  if (readyToDecrementTime()) updateTimeLeft();
 
   realTime = t;
   requestAnimationFrame(tick);
 
   handlePlayerInput(turningSpeed);
 
+  //updateScreenShake();
   drawSky();
   drawGround();
   drawCity();
@@ -283,25 +291,8 @@ function tick(t: number) {
 
   for (let i = zMap.length - 1; i > skyHeight; i--) {
     textureCoord += MAX_TEX / TEX_DEN;
-    const zWorld = zMap[i];
-    const index = (textureCoord + gameTime + zWorld) % MAX_TEX;
-    //const index = (((textureCoord + gameTime + zWorld) % MAX_TEX) + MAX_TEX) % MAX_TEX;
 
-    const whiteLineWidth = whiteLineWidths[i];
-    const roadWidth = roadWidths[i];
-    const percent = max(i / groundHeight, 0.3);
-    const totalPercent = i / height;
-
-    // Set i on sprites
-    const currentSprite = sprites[spriteIndex];
-    while (spriteIndex < sprites.length) {
-      if (currentSprite.pos.z <= zWorld) {
-        currentSprite.i = i;
-        spriteIndex++;
-      } else {
-        break;
-      }
-    }
+    drawRoad(i);
 
     //const currentSideSprite = sideSprites[sideSpriteIndex];
     //while (sideSpriteIndex < sideSprites.length) {
@@ -335,6 +326,20 @@ function tick(t: number) {
     //xOffset += ddx;
 
     //ctx.strokeStyle = funColor(index);
+
+}
+
+function drawRoad(i: number) {
+    const zWorld = zMap[i];
+    const index = (textureCoord + gameTime + zWorld) % MAX_TEX;
+    //const index = (((textureCoord + gameTime + zWorld) % MAX_TEX) + MAX_TEX) % MAX_TEX;
+
+    const whiteLineWidth = whiteLineWidths[i];
+    const roadWidth = roadWidths[i];
+    const percent = max(i / groundHeight, 0.3);
+    const totalPercent = i / height;
+
+ 
     const currentRoadWidth = maxRoadWidth * totalPercent;
     ctx.strokeStyle = index < MAX_TEX / 2 ? grass1 : grass2;
     ctx.beginPath();
@@ -442,8 +447,6 @@ function handlePlayerInput(turningSpeed: number) {
   player.pos.x = clamp(player.pos.x, -PLAYER_EDGE, PLAYER_EDGE);
   xOffset = xCenter + player.pos.x;
   
-  //if (logBox.innerText.length >= 1000) logBox.innerText = "";
-  //logBox.innerText = `${player.pos.x}\n${logBox.innerText}`;
   updatePlayerPos(player.pos.x, player.pos.y);
 }
 
@@ -493,6 +496,9 @@ function activateSprite(sprite: SideSprite) {
   sprite.iCoord = sprite.i;
   const m = 2.2;
   sprite.pos.x = randomIntBetween(-PLAYER_EDGE * m, PLAYER_EDGE * m);
+  //sprite.pos.x = 0
+  screenShake.x = randomFloatBetween(-SCREEN_SHAKE_AMOUNT, SCREEN_SHAKE_AMOUNT);
+  //screenShake.y = randomFloatBetween(-SCREEN_SHAKE_AMOUNT, SCREEN_SHAKE_AMOUNT);
 }
 
 function readyToDecrementTime() {
@@ -529,6 +535,7 @@ function timeSinceSpriteOnScreen(sprite: SideSprite)  {
 
 function drawTruck() {
   flashTruck();
+
   drawImage(
     player.image,
     player.pos,
@@ -538,6 +545,16 @@ function drawTruck() {
     true,
     player.alpha
   );
+
+  /*drawImage(
+    player.image,
+    player.pos,
+    xOffset,
+    player.i,
+    BIG_SPRITE_DIMENSIONS,
+    true,
+    player.alpha
+  );*/
 }
 
 function drawSky() {
@@ -650,6 +667,15 @@ function updatePlayerPos(x: number, y: number) {
   player.pos.y = y;
   player.rect.x = x;
   player.rect.y = y;
+}
+
+function updateScreenShake() {
+  const xAmp = abs(screenShake.x);
+  const yAmp = abs(screenShake.y);
+  const xSign = sign(screenShake.x);
+  const x = sin(gameTime / 100) * xAmp * xSign;
+  console.log(x);
+  screenShake.x = x;
 }
 
 function resize() {
@@ -933,11 +959,11 @@ function overlaps(sprite: SideSprite) {
   const h = r1y < r2y + r2h && r1y + r1h > r2y ? true : false;
   const w = r1x < r2x + r2w && r1x + r1w > r2x ? true : false;
 
-  /*ctx.fillStyle = "green";
+  ctx.fillStyle = "green";
   ctx.fillRect(r2x, r2y, r2w, r2h);
 
   ctx.fillStyle = "red";
-  ctx.fillRect(r1x, r1y, r1w, r1h);*/
+  ctx.fillRect(r1x, r1y, r1w, r1h);
 
   if (h && w) {
     //ctx.fillStyle = "red";
