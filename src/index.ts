@@ -44,7 +44,15 @@ const MAX_FUNDING_BAR = width - UI_PADDING * 2;
 const HIT_TIME = 7;
 const FLASH_TIME = 1.5;
 const FUNDING_HIT_AMOUNT = 5;
+const MAILBOX_HIT_AMOUNT = 5;
+const PLAYER_EDGE = width / 4;
 //const d = 1/tan(60/2);
+
+const OVLERLAP_MAP = {
+  wall: handleWallOverlap,
+  gold: handleGoldOverlap,
+  mailbox: handleMailboxOverlap
+};
 
 canvas.height = height;
 canvas.width = width;
@@ -165,11 +173,12 @@ const rightMailboxes: SideSprite[] = range(3).map(n => {
     rect: { x: -1, y: -1, width: -1, height: -1 },
     i: floor(iCoord),
     iCoord: iCoord,
-    alpha: 1
+    alpha: 1,
+    name: "mailbox"
   };
 });
 
-const golds: SideSprite[] = range(0).map(n => {
+const golds: SideSprite[] = range(1).map(n => {
   const iCoord = n + skyHeight + ((n * 40) % groundHeight);
   return {
     image: goldImage,
@@ -177,7 +186,8 @@ const golds: SideSprite[] = range(0).map(n => {
     rect: { x: -1, y: -1, width: -1, height: -1 },
     i: floor(iCoord),
     iCoord: iCoord,
-    alpha: 1
+    alpha: 1,
+    name: "gold"
   };
 });
 
@@ -189,7 +199,8 @@ const walls: SideSprite[] = range(1).map(n => {
     rect: { x: -1, y: -1, width: -1, height: -1 },
     i: floor(iCoord),
     iCoord: iCoord,
-    alpha: 1
+    alpha: 1,
+    name: "wall"
   };
 });
 
@@ -233,27 +244,7 @@ function tick(t: number) {
   realTime = t;
   requestAnimationFrame(tick);
 
-  if (inputState.left)
-    updatePlayerPos(player.pos.x - turningSpeed, player.pos.y);
-  if (inputState.right)
-    updatePlayerPos(player.pos.x + turningSpeed, player.pos.y);
-  if (inputState.jump) jump();
-
-  xOffset = xCenter + player.pos.x;
-
-  if (player.pos.y < 0)
-    player.vel.y = clamp(
-      player.vel.y + GRAVITY,
-      MAX_NEGATIVE_VEL,
-      MAX_POSITIVE_VEL
-    );
-
-  if (player.pos.y > 0) {
-    player.vel.y = 0;
-    player.pos.y = 0;
-  }
-
-  player.pos.y += clamp(player.vel.y, MAX_NEGATIVE_VEL, MAX_POSITIVE_VEL);
+  handlePlayerInput(turningSpeed);
 
   drawSky();
   drawGround();
@@ -409,10 +400,53 @@ function tick(t: number) {
   drawUi();
 }
 
+function handlePlayerInput(turningSpeed: number) {
+  if (inputState.left) {
+    //updatePlayerPos(player.pos.x - turningSpeed, player.pos.y);
+    player.pos.x = clamp(player.pos.x - turningSpeed, -PLAYER_EDGE, PLAYER_EDGE);
+  }
+  if (inputState.right) {
+    player.pos.x = clamp(player.pos.x + turningSpeed, -PLAYER_EDGE, PLAYER_EDGE);
+    //updatePlayerPos(player.pos.x + turningSpeed, player.pos.y);
+  }
+  if (inputState.jump) jump();
+  xOffset = xCenter + player.pos.x;
+
+  if (player.pos.y < 0)
+    player.vel.y = clamp(
+      player.vel.y + GRAVITY,
+      MAX_NEGATIVE_VEL,
+      MAX_POSITIVE_VEL
+    );
+
+  if (player.pos.y > 0) {
+    player.vel.y = 0;
+    player.pos.y = 0;
+  }
+
+  player.pos.y += clamp(player.vel.y, MAX_NEGATIVE_VEL, MAX_POSITIVE_VEL);
+  updatePlayerPos(player.pos.x, player.pos.y);
+}
+
 function handleOverlap(sprite: SideSprite) {
   if (inGracePeriod()) return;
+  if (OVLERLAP_MAP[sprite.name]) OVLERLAP_MAP[sprite.name]();
+}
+
+function handleWallOverlap() {
+  console.log("wall");
   gameVars.lastHitAt = gameTime;
   gameVars.funding -= FUNDING_HIT_AMOUNT;
+}
+
+function handleGoldOverlap() {
+  console.log("gold");
+  gameVars.funding += FUNDING_HIT_AMOUNT;
+}
+
+function handleMailboxOverlap() {
+  console.log("mail");
+  gameVars.funding += MAILBOX_HIT_AMOUNT;
 }
 
 function flashTruck() {
@@ -716,6 +750,7 @@ interface SideSprite {
   i: number;
   iCoord: number;
   alpha: number;
+  name: string;
 }
 
 interface Vector {
