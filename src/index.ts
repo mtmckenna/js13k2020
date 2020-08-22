@@ -14,7 +14,9 @@ import city3ImageData from "../assets/city3-big.png";
 let gameVars: GameVars = {
 	funding: 100,
 	timeLeft: 90,
-	ballots : 0
+	ballots : 0,
+	lastHitAt: null,
+	lastFlashedAt: null
 };
 
 const { floor, round, min, max } = Math;
@@ -37,6 +39,11 @@ const ROAD_WIDTH_PERCENT = 1.1;
 const ZERO_POS = { x: 0, y: 0, z: 0 };
 const UI_PADDING = 4;
 const FONT_SIZE = 20;
+const SECOND_ROW_Y = UI_PADDING * 2 + FONT_SIZE;
+const MAX_FUNDING_BAR = width - UI_PADDING * 2;
+const HIT_TIME = 7;
+const FLASH_TIME = 1.5;
+const FUNDING_HIT_AMOUNT = 5;
 //const d = 1/tan(60/2);
 
 canvas.height = height;
@@ -141,6 +148,7 @@ const player: Sprite = {
   vel: { x: 0, y: 0, z: 0 },
   i: playerI,
   iCoord: playerI,
+	alpha: 1,
   rect: {
     x: -1,
     y: -1,
@@ -156,7 +164,8 @@ const rightMailboxes: SideSprite[] = range(0).map(n => {
     pos: { x: randomIntBetween(-80, 80), y: 0, z: 0 },
     rect: { x: -1, y: -1, width: -1, height: -1 },
     i: floor(iCoord),
-    iCoord: iCoord
+    iCoord: iCoord,
+		alpha: 1
   };
 });
 
@@ -167,7 +176,8 @@ const golds: SideSprite[] = range(0).map(n => {
     pos: { x: randomIntBetween(-80, 80), y: 0, z: 0 },
     rect: { x: -1, y: -1, width: -1, height: -1 },
     i: floor(iCoord),
-    iCoord: iCoord
+    iCoord: iCoord,
+		alpha: 1
   };
 });
 
@@ -179,7 +189,8 @@ const walls: SideSprite[] = range(1).map(n => {
     pos: { x: randomIntBetween(-80, 80), y: 0, z: 0 },
     rect: { x: -1, y: -1, width: -1, height: -1 },
     i: floor(iCoord),
-    iCoord: iCoord
+    iCoord: iCoord,
+		alpha: 1
   };
 });
 
@@ -203,14 +214,13 @@ let xOffset = 0;
 //const zHorizon = zMap[skyHeight + 2];
 //const zBottom = zMap[zMap.length - 1];
 function tick(t: number) {
+	ctx.globalAlpha = 1.0;
   if (lastTime === -1) {
     lastTime = t;
     requestAnimationFrame(tick);
     return;
   }
 
-  //const jumping = player.pos.y < 0 && player.vel.y > 0;
-  const jumping = player.pos.y < 0;
   //const divisor = jumping ? jumpTime : normalTime;
   const divisor = normalTime;
   const turningSpeed = TURNING_SPEED;
@@ -230,10 +240,6 @@ function tick(t: number) {
     updatePlayerPos(player.pos.x + turningSpeed, player.pos.y);
   if (inputState.jump) jump();
 
-  //player.pos.x = clamp(player.pos.x, 0, width);
-  //console.log(player.pos.x);
-  //console.log(player.pos.x);
-  //xOffset = xCenter + player.pos.x - width/2;
   xOffset = xCenter + player.pos.x;
 
   if (player.pos.y < 0) player.vel.y = clamp(player.vel.y + GRAVITY, MAX_NEGATIVE_VEL, MAX_POSITIVE_VEL);
@@ -253,23 +259,23 @@ function tick(t: number) {
   ctx.fillStyle = road1;
   ctx.fillRect(0, skyHeight, width, groundHeight);
 
-  // Draw White House
+  // Draw city
   const whOffset = xCenter - xOffset;
-  drawImage2(
+  drawImage(
     wh1,
     ZERO_POS,
     whOffset + whStartPos,
     horizonI - BIG_SPRITE_DIMENSIONS,
     BIG_SPRITE_DIMENSIONS
   );
-  drawImage2(
+  drawImage(
     wh2,
     ZERO_POS,
     whOffset + whStartPos + BIG_SPRITE_DIMENSIONS,
     horizonI - BIG_SPRITE_DIMENSIONS,
     BIG_SPRITE_DIMENSIONS
   );
-  drawImage2(
+  drawImage(
     wh3,
     ZERO_POS,
     whOffset + whStartPos + 2 * BIG_SPRITE_DIMENSIONS,
@@ -309,9 +315,7 @@ function tick(t: number) {
     const currentSprite = sprites[spriteIndex];
     while (spriteIndex < sprites.length) {
       if (currentSprite.pos.z <= zWorld) {
-        //console.log(currentSprite.zIndex, currentSprite.pos.z, gameTime);
         currentSprite.i = i;
-        //currentSprite.zIndex = skyHeight + i;
         spriteIndex++;
       } else {
         break;
@@ -406,9 +410,11 @@ function tick(t: number) {
 
   sideSprites.forEach(sprite => {
     if (sprite.i === -1) return;
-    overlaps(sprite);
+    const overlapping = overlaps(sprite);
 
-    drawImage2(
+		if (overlapping) handleOverlap(sprite);
+
+    drawImage(
       sprite.image,
       sprite.pos,
       xCenter - player.pos.x,
@@ -426,33 +432,78 @@ function tick(t: number) {
     }
   });
 
+	drawTruck();
+	drawUi();
+}
 
-  drawImage2(
+function handleOverlap(sprite: SideSprite) {
+  if (inGracePeriod()) return;
+  gameVars.lastHitAt = gameTime;
+  gameVars.funding -= FUNDING_HIT_AMOUNT;	
+}
+
+function flashTruck() {
+  if (!inGracePeriod()) {
+    player.alpha = 1;
+    return;
+  }
+
+	if (flashedRecently()) return;
+  const alpha = player.alpha === 1 ? .5 : 1;
+  gameVars.lastFlashedAt = gameTime;
+  player.alpha = alpha;
+}
+
+function inGracePeriod() {
+  return timeSinceLastHit() < HIT_TIME;
+}
+
+function flashedRecently() {
+ return timeSinceLastFlash() < FLASH_TIME;
+}
+
+function timeSinceLastHit() {
+	return gameTime - gameVars.lastHitAt;
+}
+
+function timeSinceLastFlash() {
+	return gameTime - gameVars.lastFlashedAt;
+}
+
+function drawTruck() {
+	flashTruck();
+  drawImage(
     player.image,
     player.pos,
     xOffset,
     player.i,
-    BIG_SPRITE_DIMENSIONS
+    BIG_SPRITE_DIMENSIONS,
+		true,
+		player.alpha
   );
+}
 
-	drawFundingMeter();
+function drawUi() {
   drawText(canvas, '000', UI_PADDING, UI_PADDING, FONT_SIZE);
   drawText(canvas, '320', width - 3 * (FONT_SIZE*.8), UI_PADDING, FONT_SIZE);
+	drawFundingMeter();
 }
 
 function drawFundingMeter() {
 	ctx.fillStyle = grass2;
-	ctx.fillRect(UI_PADDING, UI_PADDING * 2 + FONT_SIZE, width - UI_PADDING * 2, FONT_SIZE);
-  drawText(canvas, 'FUNDING', UI_PADDING, UI_PADDING * 2 + FONT_SIZE, FONT_SIZE);
+	const width =  floor(MAX_FUNDING_BAR * gameVars.funding / 100);
+	ctx.fillRect(UI_PADDING, SECOND_ROW_Y, width, FONT_SIZE);
+  drawText(canvas, 'FUNDING', UI_PADDING, SECOND_ROW_Y, FONT_SIZE);
 }
 
-function drawImage2(
+function drawImage(
   image: HTMLImageElement,
   pos: Vector,
   xOffset = 0,
   yOffset = 0,
   dimensions = SPRITE_DIMENSIONS,
-  dontScale = true
+  dontScale = true,
+	alpha = 1
 ) {
   let scale = min(yOffset / height, 1) || 1;
   scale = dontScale ? 1 : scale;
@@ -460,6 +511,9 @@ function drawImage2(
   if (!dontScale) xScaleOffset = (scale * dimensions) / 2;
   const yScaleOffset = dontScale ? 0 : scale * dimensions;
 
+
+	const oldAlpha = ctx.globalAlpha;
+	ctx.globalAlpha = alpha;
   ctx.drawImage(
     image,
     0,
@@ -471,6 +525,8 @@ function drawImage2(
     floor(dimensions * scale),
     floor(dimensions * scale)
   );
+
+	ctx.globalAlpha = oldAlpha;
 }
 
 async function load() {
@@ -643,6 +699,7 @@ interface Sprite {
   rect: Rect;
   i: number;
   iCoord: number;
+	alpha: number;
 }
 
 interface SideSprite {
@@ -651,6 +708,7 @@ interface SideSprite {
   rect: Rect;
   i: number;
   iCoord: number;
+	alpha: number;
 }
 
 interface Vector {
@@ -678,6 +736,8 @@ interface GameVars {
 	ballots: number;
 	funding: number;
 	timeLeft: number;
+	lastHitAt: number;
+	lastFlashedAt: number;
 }
 
 //interface RoadChunk {
@@ -780,10 +840,12 @@ function overlaps(sprite: SideSprite) {
   ctx.fillRect(r1x, r1y, r1w, r1h);*/
 
   if (h && w) {
-    //console.log("HIT", player.pos, sprite.pos);
-    ctx.fillStyle = "red";
-    ctx.fillRect(r1x, r1y, r1w, r1h);
-  }
+    //ctx.fillStyle = "red";
+    //ctx.fillRect(r1x, r1y, r1w, r1h);
+		return true;
+  } else {
+		return false;
+	}
 }
 
 function range(number: number) {
