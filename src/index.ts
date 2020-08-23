@@ -29,7 +29,6 @@ const canvas: HTMLCanvasElement = document.querySelector(
 const ctx: CanvasRenderingContext2D = canvas.getContext("2d");
 let width = 320;
 let height = 240;
-const EPSILON = .01;
 const aspectRatio = width / height;
 const SPRITE_DIMENSIONS = 32;
 const BIG_SPRITE_DIMENSIONS = 64;
@@ -50,17 +49,14 @@ const FUNDING_HIT_AMOUNT = 5;
 const MAILBOX_HIT_AMOUNT = 5;
 const PLAYER_EDGE = width / 2;
 const GAME_UPDATE_TIME = 10;
-const SCREEN_SHAKE_AMOUNT = 50;
-const SCREEN_SHAKE_DAMPEN = .9;
 const MAX_ROAD_WIDTH = width * ROAD_WIDTH_PERCENT
+const SHAKE_CLASS_NAME = "shake";
 
 const OVLERLAP_MAP = {
   wall: handleWallOverlap,
   gold: handleGoldOverlap,
   mailbox: handleMailboxOverlap
 };
-
-const screenShake: {x: number, y: number } = { x: 0, y: 0 };
 
 canvas.height = height;
 canvas.width = width;
@@ -264,6 +260,10 @@ function tick(t: number) {
     sprite.i = round(sprite.iCoord);
   });
 
+  if (!inGracePeriod()) {
+    unsetShake();
+  }
+
   for (let i = zMap.length - 1; i > skyHeight; i--) {
     textureCoord += MAX_TEX / TEX_DEN;
 
@@ -435,6 +435,7 @@ function handleOverlap(sprite: SideSprite) {
 function handleWallOverlap() {
   gameVars.lastHitAt = gameTime;
   gameVars.funding = max(gameVars.funding - FUNDING_HIT_AMOUNT, 0);
+  setShake();
 }
 
 function handleGoldOverlap() {
@@ -471,8 +472,6 @@ function activateSprite(sprite: SideSprite) {
   sprite.i = skyHeight - BIG_SPRITE_DIMENSIONS;
   sprite.iCoord = sprite.i;
   sprite.roadPercent = random(); 
-  //screenShake.x = randomFloatBetween(-SCREEN_SHAKE_AMOUNT, SCREEN_SHAKE_AMOUNT);
-  //screenShake.y = randomFloatBetween(-SCREEN_SHAKE_AMOUNT, SCREEN_SHAKE_AMOUNT);
 }
 
 function readyToDecrementTime() {
@@ -520,16 +519,6 @@ function drawTruck() {
     true,
     player.alpha
   );
-
-  /*drawImage(
-    player.image,
-    player.pos,
-    xOffset,
-    player.i,
-    BIG_SPRITE_DIMENSIONS,
-    true,
-    player.alpha
-  );*/
 }
 
 function drawSky() {
@@ -643,15 +632,6 @@ function updatePlayerPos(x: number, y: number) {
   player.pos.y = y;
   player.rect.x = x;
   player.rect.y = y;
-}
-
-function updateScreenShake() {
-  const xAmp = abs(screenShake.x);
-  const yAmp = abs(screenShake.y);
-  const xSign = sign(screenShake.x);
-  const x = sin(gameTime / 100) * xAmp * xSign;
-  console.log(x);
-  screenShake.x = x;
 }
 
 function resize() {
@@ -965,10 +945,20 @@ function randomIntBetween(min: number, max: number) {
   return Math.floor(randomFloatBetween(min, max + 1));
 }
 
+function setShake() {
+	if (canvas.classList.contains(SHAKE_CLASS_NAME)) return;
+	canvas.classList.add(SHAKE_CLASS_NAME);
+}
+
+function unsetShake() {
+	if (!canvas.classList.contains(SHAKE_CLASS_NAME)) return;
+	canvas.classList.remove(SHAKE_CLASS_NAME);
+}
+
+
 // TODO:
 // parrallax
 // brick walls
-// screen shake
 // lights on truck
 // more usa stuff?
 // particles
