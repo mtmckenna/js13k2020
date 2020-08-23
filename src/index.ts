@@ -51,6 +51,7 @@ const PLAYER_EDGE = width / 2;
 const GAME_UPDATE_TIME = 10;
 const MAX_ROAD_WIDTH = width * ROAD_WIDTH_PERCENT
 const SHAKE_CLASS_NAME = "shake";
+const ALPHA_INCREASE_AMOUNT = .1;
 
 const OVLERLAP_MAP = {
   wall: handleWallOverlap,
@@ -370,6 +371,7 @@ function drawRoad(i: number) {
       activateSprite(sprite);
     }
 
+    if (sprite.alpha < 1) sprite.alpha += ALPHA_INCREASE_AMOUNT;
 
     const roadWidth = roadWidths[sprite.i];
     const spriteOffset = roadWidth.x1 + (roadWidth.x2 - roadWidth.x1) * sprite.roadPercent;
@@ -381,7 +383,8 @@ function drawRoad(i: number) {
       spriteOffset - player.pos.x,
       sprite.i,
       BIG_SPRITE_DIMENSIONS,
-      false
+      false,
+      sprite.alpha
     );
 
     if (sprite.i > zMap.length - 2) deactivateSprite(sprite);
@@ -472,6 +475,7 @@ function activateSprite(sprite: SideSprite) {
   sprite.i = skyHeight - BIG_SPRITE_DIMENSIONS;
   sprite.iCoord = sprite.i;
   sprite.roadPercent = random(); 
+  sprite.alpha = 0;
 }
 
 function readyToDecrementTime() {
