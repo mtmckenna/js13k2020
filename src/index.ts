@@ -89,6 +89,8 @@ resize();
 const sky = "#6c82a6";
 const grass1 = "#37946e";
 const grass2 = "#306b40";
+const GOOD_FUNDING_COLOR = grass2;
+const BAD_FUNDING_COLOR = "#852217";
 const road1 = "#8c8e91";
 const road2 = "#e2ebda";
 const maxWhiteLineWidthPercent = 0.009;
@@ -561,7 +563,7 @@ function drawCity() {
 }
 
 function drawUi() {
-  drawText(canvas, pad(gameVars.ballots), UI_PADDING, UI_PADDING, FONT_SIZE);
+  drawText(canvas, `${pad(gameVars.ballots)} BALLOTS`, UI_PADDING, UI_PADDING, FONT_SIZE);
   drawText(canvas, pad(gameVars.timeLeft), width - 3 * (FONT_SIZE * 0.8), UI_PADDING, FONT_SIZE);
   drawFundingMeter();
 }
@@ -571,7 +573,7 @@ function pad(num: number) {
 }
 
 function drawFundingMeter() {
-  ctx.fillStyle = grass2;
+  ctx.fillStyle = gameVars.funding < 50 ? BAD_FUNDING_COLOR : GOOD_FUNDING_COLOR;
   const width = floor((MAX_FUNDING_BAR * gameVars.funding) / 100);
   ctx.fillRect(UI_PADDING, SECOND_ROW_Y, width, FONT_SIZE);
   drawText(canvas, "FUNDING", UI_PADDING, SECOND_ROW_Y, FONT_SIZE);
