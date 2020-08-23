@@ -48,11 +48,11 @@ const HIT_TIME = 7;
 const FLASH_TIME = 1.5;
 const FUNDING_HIT_AMOUNT = 5;
 const MAILBOX_HIT_AMOUNT = 5;
-const PLAYER_EDGE = width / 4;
+const PLAYER_EDGE = width / 2;
 const GAME_UPDATE_TIME = 10;
 const SCREEN_SHAKE_AMOUNT = 50;
 const SCREEN_SHAKE_DAMPEN = .9;
-//const d = 1/tan(60/2);
+const MAX_ROAD_WIDTH = width * ROAD_WIDTH_PERCENT
 
 const OVLERLAP_MAP = {
   wall: handleWallOverlap,
@@ -60,10 +60,7 @@ const OVLERLAP_MAP = {
   mailbox: handleMailboxOverlap
 };
 
-const screenShake = {
-  x: 0,
-  y: 0
-};
+const screenShake: {x: number, y: number } = { x: 0, y: 0 };
 
 canvas.height = height;
 canvas.width = width;
@@ -100,16 +97,12 @@ const road2 = "#e2ebda";
 const maxWhiteLineWidthPercent = 0.009;
 const sideLineWidth = 1;
 
-let maxRoadWidth = width * ROAD_WIDTH_PERCENT;
-//console.log("ROAD", maxRoadWidth / 2);
 let maxWhiteLineWidth = width * maxWhiteLineWidthPercent;
 let skyHeight = height * (1.0 - GROUND_PERCENT);
 let groundHeight = floor(height * GROUND_PERCENT);
 let roadStartX = (width - width * ROAD_WIDTH_PERCENT) / 2;
 let realTime = null;
 let gameTime = 0;
-
-const sprites: Sprite[] = [];
 
 const cameraY = 30;
 const zMap: number[] = [];
@@ -123,8 +116,8 @@ for (let i = 0; i < height; i++) {
 const roadWidths: Array<{ x1: number; x2: number }> = [];
 for (let i = 0; i < zMap.length; i++) {
   const percent = i / height;
-  const width = maxRoadWidth * percent;
-  const startX = roadStartX + (maxRoadWidth - width) / 2;
+  const width = MAX_ROAD_WIDTH * percent;
+  const startX = roadStartX + (MAX_ROAD_WIDTH - width) / 2;
   roadWidths.push({ x1: startX, x2: startX + width });
 }
 
@@ -132,29 +125,14 @@ const whiteLineWidths: Array<{ x1: number; x2: number }> = [];
 for (let i = 0; i < zMap.length; i++) {
   const percent = i / height;
   const width = maxWhiteLineWidth * percent;
-  const startX = roadStartX + (maxRoadWidth - width) / 2;
+  const startX = roadStartX + (MAX_ROAD_WIDTH - width) / 2;
   whiteLineWidths.push({ x1: startX, x2: startX + width });
 }
-
-//const roadSegments: number[] = [];
-//let count = 0;
-//let sign = 1;
-//for (let i = 0; i < zMap.length; i++) {
-  //if (count === 10) {
-    //sign *= -1;
-    //count = 0;
-  //}
-
-  //count++;
-  //const val = 0.01 * sign;
-  //roadSegments.push(val);
-//}
 
 const horizonI = skyHeight;
 const xCenter = floor(width / 2);
 
 //const logBox: HTMLElement = document.querySelector("#log");
-console.log(zMap);
 
 let playerIForGround50 = 50;
 const playerI = playerIForGround50 + horizonI;
@@ -186,11 +164,12 @@ const rightMailboxes: SideSprite[] = range(2).map(n => {
     percentChanceOfSpawning: .02,
     minTimeOffScreen: 1,
     lastOnScreenAt: null, 
+    roadPercent: random(),
     active: false
   };
 });
 
-const golds: SideSprite[] = range(0).map(n => {
+const golds: SideSprite[] = range(1).map(n => {
   const iCoord = n + skyHeight + ((n * 40) % groundHeight);
   return {
     image: goldImage,
@@ -203,11 +182,12 @@ const golds: SideSprite[] = range(0).map(n => {
     percentChanceOfSpawning: .01,
     minTimeOffScreen: 10,
     lastOnScreenAt: null,
+    roadPercent: random(),
     active: false
   };
 });
 
-const walls: SideSprite[] = range(1).map(n => {
+const walls: SideSprite[] = range(2).map(n => {
   const iCoord = n + skyHeight + ((n * 40) % groundHeight);
   return {
     image: wallImage,
@@ -219,6 +199,7 @@ const walls: SideSprite[] = range(1).map(n => {
     name: "wall",
     percentChanceOfSpawning: .05,
     minTimeOffScreen: 5,
+    roadPercent: random(),
     lastOnScreenAt: null,
     active: false
   };
@@ -227,10 +208,8 @@ const walls: SideSprite[] = range(1).map(n => {
 const sideSprites: SideSprite[] = [];
 
 const MAX_TEX = 2;
-//const MAX_TEX = 5;
 const TEX_DEN = MAX_TEX * 10;
-//const TURNING_SPEED = 1.9;
-const TURNING_SPEED = 1.4;
+const TURNING_SPEED = 2.4;
 
 const SLOW_MULTIPLIER = 4;
 const normalTime = 50;
@@ -239,10 +218,6 @@ const SIDE_SPRIDE_SLOW_INCREASE = 1.8 / SLOW_MULTIPLIER;
 const jumpTime = normalTime * SLOW_MULTIPLIER;
 let lastTime = -1;
 let xOffset = 0;
-//const movingSegment: RoadSegment = { dx: roadSegments[0], i: zMap.length + 1 };
-//const bottomSegment: RoadSegment = { dx: 0, i: zMap.length };
-//const zHorizon = zMap[skyHeight + 2];
-//const zBottom = zMap[zMap.length - 1];
 function tick(t: number) {
   ctx.globalAlpha = 1.0;
   if (lastTime === -1) {
@@ -338,9 +313,9 @@ function drawRoad(i: number) {
     const roadWidth = roadWidths[i];
     const percent = max(i / groundHeight, 0.3);
     const totalPercent = i / height;
-
  
-    const currentRoadWidth = maxRoadWidth * totalPercent;
+    const currentRoadWidth = MAX_ROAD_WIDTH * totalPercent;
+    //console.log(currentRoadWidth, roadWidths[i].x2 - roadWidths[i].x1);
     ctx.strokeStyle = index < MAX_TEX / 2 ? grass1 : grass2;
     ctx.beginPath();
     ctx.moveTo(round(0), i);
@@ -395,20 +370,21 @@ function drawRoad(i: number) {
       activateSprite(sprite);
     }
 
+
+    const roadWidth = roadWidths[sprite.i];
+    const spriteOffset = roadWidth.x1 + (roadWidth.x2 - roadWidth.x1) * sprite.roadPercent;
     if (overlaps(sprite)) handleOverlap(sprite);
 
     drawImage(
       sprite.image,
-      sprite.pos,
-      xCenter - player.pos.x,
+      ZERO_POS,
+      spriteOffset - player.pos.x,
       sprite.i,
       BIG_SPRITE_DIMENSIONS,
       false
     );
 
-    if (sprite.i > zMap.length - 2) {
-      deactivateSprite(sprite);
-    }
+    if (sprite.i > zMap.length - 2) deactivateSprite(sprite);
   });
 
   drawTruck();
@@ -494,10 +470,8 @@ function activateSprite(sprite: SideSprite) {
   sprite.active = true;
   sprite.i = skyHeight - BIG_SPRITE_DIMENSIONS;
   sprite.iCoord = sprite.i;
-  const m = 2.2;
-  sprite.pos.x = randomIntBetween(-PLAYER_EDGE * m, PLAYER_EDGE * m);
-  //sprite.pos.x = 0
-  screenShake.x = randomFloatBetween(-SCREEN_SHAKE_AMOUNT, SCREEN_SHAKE_AMOUNT);
+  sprite.roadPercent = random(); 
+  //screenShake.x = randomFloatBetween(-SCREEN_SHAKE_AMOUNT, SCREEN_SHAKE_AMOUNT);
   //screenShake.y = randomFloatBetween(-SCREEN_SHAKE_AMOUNT, SCREEN_SHAKE_AMOUNT);
 }
 
@@ -539,7 +513,8 @@ function drawTruck() {
   drawImage(
     player.image,
     player.pos,
-    xOffset,
+    // Want car to be at the middle so start there and subtract off the player position
+    xCenter - player.pos.x,
     player.i,
     BIG_SPRITE_DIMENSIONS,
     true,
@@ -625,6 +600,7 @@ function drawImage(
   const yScaleOffset = dontScale ? 0 : scale * dimensions;
 
   const oldAlpha = ctx.globalAlpha;
+
   ctx.globalAlpha = alpha;
   ctx.drawImage(
     image,
@@ -632,10 +608,10 @@ function drawImage(
     0,
     dimensions,
     dimensions,
-    floor(xOffset + pos.x - xScaleOffset),
-    floor(yOffset + pos.y + pos.z + yScaleOffset),
-    floor(dimensions * scale),
-    floor(dimensions * scale)
+    round(xOffset + pos.x - xScaleOffset),
+    round(yOffset + pos.y + pos.z + yScaleOffset),
+    round(dimensions * scale),
+    round(dimensions * scale)
   );
 
   ctx.globalAlpha = oldAlpha;
@@ -829,6 +805,7 @@ interface SideSprite {
   rect: Rect;
   i: number;
   iCoord: number;
+  roadPercent: number;
   alpha: number;
   name: string;
   lastOnScreenAt: number;
@@ -944,11 +921,13 @@ function overlaps(sprite: SideSprite) {
   const past = r2y >= player.i;
   if (!past) return;
 
-  const playerOffset = xCenter + player.pos.x;
-  const spriteOffset = xCenter - player.pos.x;
+  const playerOffset = xCenter;
+  
+  const roadWidth = roadWidths[sprite.i];
+  const spriteOffset = roadWidth.x1 + (roadWidth.x2 - roadWidth.x1) * sprite.roadPercent - scale * BIG_SPRITE_DIMENSIONS / 2 - player.pos.x;
 
-  const r1x = player.pos.x + playerOffset - BIG_SPRITE_DIMENSIONS / 2;
-  const r2x = sprite.pos.x + spriteOffset - (scale * BIG_SPRITE_DIMENSIONS) / 2;
+  const r1x = playerOffset - BIG_SPRITE_DIMENSIONS / 2;
+  const r2x = spriteOffset;
   const r1w = BIG_SPRITE_DIMENSIONS;
   const r2w = BIG_SPRITE_DIMENSIONS * scale;
 
@@ -959,15 +938,15 @@ function overlaps(sprite: SideSprite) {
   const h = r1y < r2y + r2h && r1y + r1h > r2y ? true : false;
   const w = r1x < r2x + r2w && r1x + r1w > r2x ? true : false;
 
-  ctx.fillStyle = "green";
-  ctx.fillRect(r2x, r2y, r2w, r2h);
+/*  ctx.fillStyle = "green";*/
+  //ctx.fillRect(r2x, r2y, r2w, r2h);
 
-  ctx.fillStyle = "red";
-  ctx.fillRect(r1x, r1y, r1w, r1h);
+  //ctx.fillStyle = "red";
+  //ctx.fillRect(r1x, r1y, r1w, r1h);
 
   if (h && w) {
-    //ctx.fillStyle = "red";
-    //ctx.fillRect(r1x, r1y, r1w, r1h);
+    /*ctx.fillStyle = "pink";
+    ctx.fillRect(r1x, r1y, r1w, r1h);*/
     return true;
   } else {
     return false;
