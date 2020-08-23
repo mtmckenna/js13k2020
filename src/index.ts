@@ -573,7 +573,7 @@ function pad(num: number) {
 }
 
 function drawFundingMeter() {
-  ctx.fillStyle = gameVars.funding < 50 ? BAD_FUNDING_COLOR : GOOD_FUNDING_COLOR;
+  ctx.fillStyle = gameVars.funding < 20 ? BAD_FUNDING_COLOR : GOOD_FUNDING_COLOR;
   const width = floor((MAX_FUNDING_BAR * gameVars.funding) / 100);
   ctx.fillRect(UI_PADDING, SECOND_ROW_Y, width, FONT_SIZE);
   drawText(canvas, "FUNDING", UI_PADDING, SECOND_ROW_Y, FONT_SIZE);
