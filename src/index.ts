@@ -10,6 +10,7 @@ import whitehouse3ImageData from "../assets/whitehouse3-big.png";
 import city1ImageData from "../assets/city1-big.png";
 import city2ImageData from "../assets/city2-big.png";
 import city3ImageData from "../assets/city3-big.png";
+import envelopeImageData from "../assets/envelope2.png";
 
 let gameVars: GameVars = {
   funding: 100,
@@ -18,7 +19,6 @@ let gameVars: GameVars = {
   lastHitAt: null,
   lastFlashedAt: null,
   lastTimeDecrementedAt: null
-
 };
 
 const { abs, random, floor, round, min, max, sin, sign } = Math;
@@ -49,9 +49,12 @@ const FUNDING_HIT_AMOUNT = 5;
 const MAILBOX_HIT_AMOUNT = 5;
 const PLAYER_EDGE = width / 2;
 const GAME_UPDATE_TIME = 10;
-const MAX_ROAD_WIDTH = width * ROAD_WIDTH_PERCENT
+const MAX_ROAD_WIDTH = width * ROAD_WIDTH_PERCENT;
 const SHAKE_CLASS_NAME = "shake";
-const ALPHA_INCREASE_AMOUNT = .1;
+const ALPHA_INCREASE_AMOUNT = 0.1;
+const ENVELOPE_DIMENSION = 16;
+const ENVELOPE_TIME = 5;
+const ENVELOPE_DELAY = 100;
 
 const OVLERLAP_MAP = {
   wall: handleWallOverlap,
@@ -73,6 +76,9 @@ goldImage.src = goldImageData;
 
 const wallImage = new Image();
 wallImage.src = brickWallImageData;
+
+const envelopeImage = new Image();
+envelopeImage.src = envelopeImageData;
 
 const wh1 = new Image();
 const wh2 = new Image();
@@ -139,16 +145,21 @@ const player: Sprite = {
   image: carImage,
   pos: { x: 0, y: 0, z: zMap[playerI] },
   vel: { x: 0, y: 0, z: 0 },
-  i: playerI,
-  iCoord: playerI,
   alpha: 1,
-  rect: {
-    x: -1,
-    y: -1,
-    width: BIG_SPRITE_DIMENSIONS,
-    height: BIG_SPRITE_DIMENSIONS
-  }
+  active: true,
+  activatedAt: 1
 };
+
+const envelopes: Sprite[] = range(MAILBOX_HIT_AMOUNT * 5).map(_ => {
+  return {
+    image: envelopeImage,
+    pos: { x: 0, y: 0, z: 0 },
+    vel: { x: 1, y: 1, z: 0 },
+    alpha: 1,
+    active: false,
+    activatedAt: 0
+  };
+});
 
 const rightMailboxes: SideSprite[] = range(2).map(n => {
   const iCoord = n + skyHeight + ((n * 40) % groundHeight);
@@ -160,9 +171,9 @@ const rightMailboxes: SideSprite[] = range(2).map(n => {
     iCoord: iCoord,
     alpha: 1,
     name: "mailbox",
-    percentChanceOfSpawning: .02,
+    percentChanceOfSpawning: 0.02,
     minTimeOffScreen: 1,
-    lastOnScreenAt: null, 
+    lastOnScreenAt: null,
     roadPercent: random(),
     active: false
   };
@@ -178,7 +189,7 @@ const golds: SideSprite[] = range(1).map(n => {
     iCoord: iCoord,
     alpha: 1,
     name: "gold",
-    percentChanceOfSpawning: .01,
+    percentChanceOfSpawning: 0.01,
     minTimeOffScreen: 10,
     lastOnScreenAt: null,
     roadPercent: random(),
@@ -196,7 +207,7 @@ const walls: SideSprite[] = range(2).map(n => {
     iCoord: iCoord,
     alpha: 1,
     name: "wall",
-    percentChanceOfSpawning: .05,
+    percentChanceOfSpawning: 0.05,
     minTimeOffScreen: 5,
     roadPercent: random(),
     lastOnScreenAt: null,
@@ -242,7 +253,6 @@ function tick(t: number) {
 
   handlePlayerInput(turningSpeed);
 
-  //updateScreenShake();
   drawSky();
   drawGround();
   drawCity();
@@ -270,7 +280,7 @@ function tick(t: number) {
   for (let i = zMap.length - 1; i > skyHeight; i--) {
     textureCoord += MAX_TEX / TEX_DEN;
 
-    drawRoad(i);
+    drawRoad(i, textureCoord);
 
     //const currentSideSprite = sideSprites[sideSpriteIndex];
     //while (sideSpriteIndex < sideSprites.length) {
@@ -304,67 +314,16 @@ function tick(t: number) {
     //xOffset += ddx;
 
     //ctx.strokeStyle = funColor(index);
-
-}
-
-function drawRoad(i: number) {
-    const zWorld = zMap[i];
-    const index = (textureCoord + gameTime + zWorld) % MAX_TEX;
-    //const index = (((textureCoord + gameTime + zWorld) % MAX_TEX) + MAX_TEX) % MAX_TEX;
-
-    const whiteLineWidth = whiteLineWidths[i];
-    const roadWidth = roadWidths[i];
-    const percent = max(i / groundHeight, 0.3);
-    const totalPercent = i / height;
- 
-    const currentRoadWidth = MAX_ROAD_WIDTH * totalPercent;
-    //console.log(currentRoadWidth, roadWidths[i].x2 - roadWidths[i].x1);
-    ctx.strokeStyle = index < MAX_TEX / 2 ? grass1 : grass2;
-    ctx.beginPath();
-    ctx.moveTo(round(0), i);
-    const x1 = floor((width - currentRoadWidth) / 2 - xOffset + xCenter);
-    ctx.lineTo(x1, i);
-    ctx.closePath();
-    ctx.stroke();
-
-    const x2 = floor(currentRoadWidth + x1);
-    ctx.beginPath();
-    ctx.moveTo(x2, i);
-    ctx.lineTo(width, i);
-    ctx.closePath();
-    ctx.stroke();
-
-    // Draw road
-    ctx.strokeStyle = road2;
-    ctx.beginPath();
-    ctx.moveTo(round(roadWidth.x1 - xOffset + xCenter), i);
-    ctx.lineTo(
-      round(roadWidth.x1 + sideLineWidth * percent - xOffset + xCenter),
-      i
-    );
-    ctx.closePath();
-    ctx.stroke();
-
-    ctx.strokeStyle = road2;
-    ctx.beginPath();
-    ctx.moveTo(round(roadWidth.x2 - xOffset + xCenter), i);
-    ctx.lineTo(
-      round(roadWidth.x2 - sideLineWidth * percent - xOffset + xCenter),
-      i
-    );
-    ctx.closePath();
-    ctx.stroke();
-
-    ctx.strokeStyle = index < MAX_TEX / 2 ? road1 : road2;
-    ctx.beginPath();
-    ctx.moveTo(round(whiteLineWidth.x1 - xOffset + xCenter), i);
-    ctx.lineTo(round(whiteLineWidth.x2 - xOffset + xCenter), i);
-    ctx.closePath();
-    ctx.stroke();
-
-    textureCoord %= MAX_TEX;
   }
 
+
+  drawRoadSprites();
+  drawUi();
+  drawEnvelopes();
+  drawTruck();
+}
+
+function drawRoadSprites() {
   sideSprites.forEach(sprite => {
     if (sprite.i === -1) return;
     if (!sprite.active) {
@@ -375,14 +334,12 @@ function drawRoad(i: number) {
 
     if (sprite.alpha < 1) sprite.alpha += ALPHA_INCREASE_AMOUNT;
 
-    const roadWidth = roadWidths[sprite.i];
-    const spriteOffset = roadWidth.x1 + (roadWidth.x2 - roadWidth.x1) * sprite.roadPercent;
     if (overlaps(sprite)) handleOverlap(sprite);
 
     drawImage(
       sprite.image,
       ZERO_POS,
-      spriteOffset - player.pos.x,
+      spriteOffset(sprite),
       sprite.i,
       BIG_SPRITE_DIMENSIONS,
       false,
@@ -391,9 +348,75 @@ function drawRoad(i: number) {
 
     if (sprite.i > zMap.length - 2) deactivateSprite(sprite);
   });
+}
 
-  drawTruck();
-  drawUi();
+function drawRoad(i: number, textureCoord: number) {
+  const zWorld = zMap[i];
+  const index = (textureCoord + gameTime + zWorld) % MAX_TEX;
+  //const index = (((textureCoord + gameTime + zWorld) % MAX_TEX) + MAX_TEX) % MAX_TEX;
+
+  const whiteLineWidth = whiteLineWidths[i];
+  const roadWidth = roadWidths[i];
+  const percent = max(i / groundHeight, 0.3);
+  const totalPercent = i / height;
+
+  const currentRoadWidth = MAX_ROAD_WIDTH * totalPercent;
+  //console.log(currentRoadWidth, roadWidths[i].x2 - roadWidths[i].x1);
+  ctx.strokeStyle = index < MAX_TEX / 2 ? grass1 : grass2;
+  ctx.beginPath();
+  ctx.moveTo(round(0), i);
+  const x1 = floor((width - currentRoadWidth) / 2 - xOffset + xCenter);
+  ctx.lineTo(x1, i);
+  ctx.closePath();
+  ctx.stroke();
+
+  const x2 = floor(currentRoadWidth + x1);
+  ctx.beginPath();
+  ctx.moveTo(x2, i);
+  ctx.lineTo(width, i);
+  ctx.closePath();
+  ctx.stroke();
+
+  // Draw road
+  ctx.strokeStyle = road2;
+  ctx.beginPath();
+  ctx.moveTo(round(roadWidth.x1 - xOffset + xCenter), i);
+  ctx.lineTo(
+    round(roadWidth.x1 + sideLineWidth * percent - xOffset + xCenter),
+    i
+  );
+  ctx.closePath();
+  ctx.stroke();
+
+  ctx.strokeStyle = road2;
+  ctx.beginPath();
+  ctx.moveTo(round(roadWidth.x2 - xOffset + xCenter), i);
+  ctx.lineTo(
+    round(roadWidth.x2 - sideLineWidth * percent - xOffset + xCenter),
+    i
+  );
+  ctx.closePath();
+  ctx.stroke();
+
+  ctx.strokeStyle = index < MAX_TEX / 2 ? road1 : road2;
+  ctx.beginPath();
+  ctx.moveTo(round(whiteLineWidth.x1 - xOffset + xCenter), i);
+  ctx.lineTo(round(whiteLineWidth.x2 - xOffset + xCenter), i);
+  ctx.closePath();
+  ctx.stroke();
+
+  textureCoord %= MAX_TEX;
+}
+
+
+
+function spriteOffset(sprite: SideSprite) {
+  const roadWidth = roadWidths[sprite.i];
+  return (
+    roadWidth.x1 +
+    (roadWidth.x2 - roadWidth.x1) * sprite.roadPercent -
+    player.pos.x
+  );
 }
 
 function updateTimeLeft() {
@@ -427,13 +450,13 @@ function handlePlayerInput(turningSpeed: number) {
   player.pos.y += clamp(player.vel.y, MAX_NEGATIVE_VEL, MAX_POSITIVE_VEL);
   player.pos.x = clamp(player.pos.x, -PLAYER_EDGE, PLAYER_EDGE);
   xOffset = xCenter + player.pos.x;
-  
+
   updatePlayerPos(player.pos.x, player.pos.y);
 }
 
 function handleOverlap(sprite: SideSprite) {
   if (inGracePeriod()) return;
-  if (OVLERLAP_MAP[sprite.name]) OVLERLAP_MAP[sprite.name]();
+  if (OVLERLAP_MAP[sprite.name]) OVLERLAP_MAP[sprite.name](sprite);
   deactivateSprite(sprite);
 }
 
@@ -447,7 +470,21 @@ function handleGoldOverlap() {
   gameVars.funding = min(gameVars.funding + FUNDING_HIT_AMOUNT, 100);
 }
 
-function handleMailboxOverlap() {
+function handleMailboxOverlap(sprite: SideSprite) {
+  const inactive = envelopes.filter(envelope => envelope.active !== true);
+  const toActivate = inactive.slice(
+    Math.max(inactive.length - MAILBOX_HIT_AMOUNT, 0)
+  );
+  toActivate.forEach((envelope, i) => {
+    setTimeout(() => {
+      envelope.active = true;
+      envelope.activatedAt = gameTime;
+      //envelope.pos.y = sprite.i;
+      //envelope.pos.x = spriteOffset(sprite);
+      envelope.pos.y = playerI;
+      envelope.pos.x = spriteOffset(sprite);
+    }, ENVELOPE_DELAY * i);
+  });
   gameVars.ballots += min(MAILBOX_HIT_AMOUNT, 999);
 }
 
@@ -476,12 +513,12 @@ function activateSprite(sprite: SideSprite) {
   sprite.active = true;
   sprite.i = skyHeight - BIG_SPRITE_DIMENSIONS;
   sprite.iCoord = sprite.i;
-  sprite.roadPercent = random(); 
+  sprite.roadPercent = random();
   sprite.alpha = 0;
 }
 
 function readyToDecrementTime() {
- return timeSinceLastTimeDecrement() > GAME_UPDATE_TIME;
+  return timeSinceLastTimeDecrement() > GAME_UPDATE_TIME;
 }
 
 function inGracePeriod() {
@@ -508,7 +545,7 @@ function spriteReadyToBeOnScreen(sprite: SideSprite) {
   return timeSinceSpriteOnScreen(sprite) > sprite.minTimeOffScreen;
 }
 
-function timeSinceSpriteOnScreen(sprite: SideSprite)  {
+function timeSinceSpriteOnScreen(sprite: SideSprite) {
   return gameTime - sprite.lastOnScreenAt;
 }
 
@@ -520,7 +557,7 @@ function drawTruck() {
     player.pos,
     // Want car to be at the middle so start there and subtract off the player position
     xCenter - player.pos.x,
-    player.i,
+    playerI,
     BIG_SPRITE_DIMENSIONS,
     true,
     player.alpha
@@ -563,8 +600,20 @@ function drawCity() {
 }
 
 function drawUi() {
-  drawText(canvas, `${pad(gameVars.ballots)} BALLOTS`, UI_PADDING, UI_PADDING, FONT_SIZE);
-  drawText(canvas, pad(gameVars.timeLeft), width - 3 * (FONT_SIZE * 0.8), UI_PADDING, FONT_SIZE);
+  drawText(
+    canvas,
+    `${pad(gameVars.ballots)} BALLOTS`,
+    UI_PADDING,
+    UI_PADDING,
+    FONT_SIZE
+  );
+  drawText(
+    canvas,
+    pad(gameVars.timeLeft),
+    width - 3 * (FONT_SIZE * 0.8),
+    UI_PADDING,
+    FONT_SIZE
+  );
   drawFundingMeter();
 }
 
@@ -573,10 +622,52 @@ function pad(num: number) {
 }
 
 function drawFundingMeter() {
-  ctx.fillStyle = gameVars.funding < 20 ? BAD_FUNDING_COLOR : GOOD_FUNDING_COLOR;
+  ctx.fillStyle =
+    gameVars.funding < 20 ? BAD_FUNDING_COLOR : GOOD_FUNDING_COLOR;
   const width = floor((MAX_FUNDING_BAR * gameVars.funding) / 100);
   ctx.fillRect(UI_PADDING, SECOND_ROW_Y, width, FONT_SIZE);
   drawText(canvas, "FUNDING", UI_PADDING, SECOND_ROW_Y, FONT_SIZE);
+}
+
+function getEnvelopePosition(envelope: Sprite): { x: number; y: number } {
+  const { x, y } = envelope.pos;
+  const { activatedAt } = envelope;
+  const t = clamp((gameTime - activatedAt) / ENVELOPE_TIME, 0, 1);
+  const x2 = lerp(x, 0, t);
+  const y2 = lerp(y, 0, t);
+  return { x: x2, y: y2 };
+}
+
+function drawEnvelopes() {
+  envelopes
+    .filter(sprite => sprite.active)
+    .forEach(envelope => {
+      const { x, y } = getEnvelopePosition(envelope);
+
+      if (x === 0 && y === 0) {
+        envelope.active = false;
+        return;
+      }
+
+      ctx.drawImage(
+        envelope.image,
+        x,
+        y,
+        ENVELOPE_DIMENSION,
+        ENVELOPE_DIMENSION
+      );
+    });
+  /*  ctx.drawImage(*/
+  //image,
+  //0,
+  //0,
+  //dimensions,
+  //dimensions,
+  //round(xOffset + pos.x - xScaleOffset),
+  //round(yOffset + pos.y + pos.z + yScaleOffset),
+  //round(dimensions * scale),
+  //round(dimensions * scale)
+  /*);*/
 }
 
 function drawImage(
@@ -636,8 +727,6 @@ function jump() {
 function updatePlayerPos(x: number, y: number) {
   player.pos.x = x;
   player.pos.y = y;
-  player.rect.x = x;
-  player.rect.y = y;
 }
 
 function resize() {
@@ -779,10 +868,9 @@ interface Sprite {
   image: HTMLImageElement;
   pos: Vector;
   vel: Vector;
-  rect: Rect;
-  i: number;
-  iCoord: number;
   alpha: number;
+  active: boolean;
+  activatedAt: number;
 }
 
 interface SideSprite {
@@ -904,27 +992,27 @@ function overlaps(sprite: SideSprite) {
   const scale = min(sprite.i / height, 1);
   const r2y = sprite.i + scale * BIG_SPRITE_DIMENSIONS;
 
-  const past = r2y >= player.i;
+  const past = r2y >= playerI;
   if (!past) return;
 
   const playerOffset = xCenter;
-  
-  const roadWidth = roadWidths[sprite.i];
-  const spriteOffset = roadWidth.x1 + (roadWidth.x2 - roadWidth.x1) * sprite.roadPercent - scale * BIG_SPRITE_DIMENSIONS / 2 - player.pos.x;
+
+  //const roadWidth = roadWidths[sprite.i];
+  //const spriteOffset = roadWidth.x1 + (roadWidth.x2 - roadWidth.x1) * sprite.roadPercent - scale * BIG_SPRITE_DIMENSIONS / 2 - player.pos.x;
 
   const r1x = playerOffset - BIG_SPRITE_DIMENSIONS / 2;
-  const r2x = spriteOffset;
+  const r2x = spriteOffset(sprite);
   const r1w = BIG_SPRITE_DIMENSIONS;
   const r2w = BIG_SPRITE_DIMENSIONS * scale;
 
-  const r1y = player.i + player.pos.y;
+  const r1y = playerI + player.pos.y;
   const r1h = BIG_SPRITE_DIMENSIONS;
   const r2h = BIG_SPRITE_DIMENSIONS * scale;
 
   const h = r1y < r2y + r2h && r1y + r1h > r2y ? true : false;
   const w = r1x < r2x + r2w && r1x + r1w > r2x ? true : false;
 
-/*  ctx.fillStyle = "green";*/
+  /*  ctx.fillStyle = "green";*/
   //ctx.fillRect(r2x, r2y, r2w, r2h);
 
   //ctx.fillStyle = "red";
@@ -951,18 +1039,22 @@ function randomIntBetween(min: number, max: number) {
   return Math.floor(randomFloatBetween(min, max + 1));
 }
 
+function lerp(start: number, end: number, t: number): number {
+  return start * (1 - t) + end * t;
+}
+
 function setShake() {
-	if (canvas.classList.contains(SHAKE_CLASS_NAME)) return;
-	canvas.classList.add(SHAKE_CLASS_NAME);
+  if (canvas.classList.contains(SHAKE_CLASS_NAME)) return;
+  canvas.classList.add(SHAKE_CLASS_NAME);
 }
 
 function unsetShake() {
-	if (!canvas.classList.contains(SHAKE_CLASS_NAME)) return;
-	canvas.classList.remove(SHAKE_CLASS_NAME);
+  if (!canvas.classList.contains(SHAKE_CLASS_NAME)) return;
+  canvas.classList.remove(SHAKE_CLASS_NAME);
 }
 
-
 // TODO:
+// do better with garbage collection
 // parrallax
 // brick walls
 // lights on truck
