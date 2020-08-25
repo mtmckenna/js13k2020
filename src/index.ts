@@ -228,7 +228,7 @@ const sideSprites: SideSprite[] = [];
 
 const MAX_TEX = 2;
 const TEX_DEN = MAX_TEX * 10;
-const TURNING_SPEED = 2.4;
+const TURNING_SPEED = 2.8;
 
 const SLOW_MULTIPLIER = 4;
 const normalTime = 50;
