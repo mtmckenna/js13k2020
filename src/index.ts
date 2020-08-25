@@ -1,5 +1,12 @@
 import { drawText } from "./font";
 
+import {
+  startGroundEngine,
+  stopGroundEngine,
+  startAirEngine,
+  stopAirEngine
+} from "./audio";
+
 import carImageData from "../assets/mailtruck-big.png";
 import brickWallImageData from "../assets/brick-wall.png";
 import goldImageData from "../assets/gold.png";
@@ -55,6 +62,8 @@ const ALPHA_INCREASE_AMOUNT = 0.1;
 const ENVELOPE_DIMENSION = 16;
 const ENVELOPE_TIME = 5;
 const ENVELOPE_DELAY = 100;
+
+let engineStarted = false;
 
 const OVLERLAP_MAP = {
   wall: handleWallOverlap,
@@ -316,7 +325,6 @@ function tick(t: number) {
     //ctx.strokeStyle = funColor(index);
   }
 
-
   drawRoadSprites();
   drawUi();
   drawEnvelopes();
@@ -408,8 +416,6 @@ function drawRoad(i: number, textureCoord: number) {
   textureCoord %= MAX_TEX;
 }
 
-
-
 function spriteOffset(sprite: SideSprite) {
   const roadWidth = roadWidths[sprite.i];
   return (
@@ -445,6 +451,8 @@ function handlePlayerInput(turningSpeed: number) {
   if (player.pos.y > 0) {
     player.vel.y = 0;
     player.pos.y = 0;
+    stopAirEngine();
+    startGroundEngine();
   }
 
   player.pos.y += clamp(player.vel.y, MAX_NEGATIVE_VEL, MAX_POSITIVE_VEL);
@@ -722,6 +730,8 @@ function clamp(num: number, min: number, max: number): number {
 function jump() {
   if (player.pos.y !== 0) return;
   player.vel.y = JUMP_VELOCITY;
+  stopGroundEngine();
+  startAirEngine();
 }
 
 function updatePlayerPos(x: number, y: number) {
@@ -760,6 +770,11 @@ const pointerState: PointerState = {
 };
 
 window.addEventListener("keydown", (e: KeyboardEvent) => {
+  if (!engineStarted) {
+    startGroundEngine();
+    engineStarted = true;
+  }
+
   switch (e.key) {
     case "ArrowLeft":
       inputState.left = true;
@@ -1056,6 +1071,7 @@ function unsetShake() {
 // TODO:
 // do better with garbage collection
 // parrallax
+// fade out audio
 // brick walls
 // lights on truck
 // more usa stuff?
