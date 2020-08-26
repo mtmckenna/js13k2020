@@ -4,7 +4,8 @@ import {
   startGroundEngine,
   stopGroundEngine,
   startAirEngine,
-  stopAirEngine
+  stopAirEngine,
+  playTheThing,
 } from "./audio";
 
 import carImageData from "../assets/mailtruck-big.png";
@@ -465,6 +466,7 @@ function handlePlayerInput(turningSpeed: number) {
 function handleOverlap(sprite: SideSprite) {
   if (inGracePeriod()) return;
   if (OVLERLAP_MAP[sprite.name]) OVLERLAP_MAP[sprite.name](sprite);
+  playTheThing();
   deactivateSprite(sprite);
 }
 
