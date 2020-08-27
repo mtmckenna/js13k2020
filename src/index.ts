@@ -1,3 +1,8 @@
+
+//window.onerror = function(message, source, lineno, colno, error) {
+  //logBox.innerText += `${message}\n`;
+//}
+
 import { drawText } from "./font";
 
 import {
@@ -147,7 +152,7 @@ for (let i = 0; i < zMap.length; i++) {
 const horizonI = skyHeight;
 const xCenter = floor(width / 2);
 
-//const logBox: HTMLElement = document.querySelector("#log");
+const logBox: HTMLElement = document.querySelector("#log");
 
 let playerIForGround50 = 50;
 const playerI = playerIForGround50 + horizonI;
@@ -1069,6 +1074,7 @@ function unsetShake() {
   if (!canvas.classList.contains(SHAKE_CLASS_NAME)) return;
   canvas.classList.remove(SHAKE_CLASS_NAME);
 }
+
 
 // TODO:
 // do better with garbage collection

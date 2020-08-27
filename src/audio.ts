@@ -1,4 +1,4 @@
-const audioContext = new (AudioContext || window.webkitAudioContext)();
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
 const compressor = audioContext.createDynamicsCompressor();
 compressor.connect(audioContext.destination);
@@ -20,9 +20,8 @@ let times = [0.3, 0.3,  0.4]; // seconds
 
 export const playTheThing = () => createSound(notes, times, "triangle");    
 
-
+// https://blog.j-labs.pl/2017/02/Creating-game-for-android-using-JavaScript-4-Sounds-Web-Audio-Api
 function createSound(notes: number[], times: number[], type: OscillatorType) {
-  console.log("CATS");
 	let oscillators = [];
 	notes.forEach((note, index) => {
 		let oscillator = audioContext.createOscillator();
@@ -61,6 +60,7 @@ export function startGroundEngine() {
 }
 
 export function stopGroundEngine() {
+  if (!audioCache.groundEngine) return;
   audioCache.groundEngine.forEach(node => node.stop());
   audioCache.groundEngine = null;
 }
@@ -73,6 +73,7 @@ export function startAirEngine() {
 }
 
 export function stopAirEngine() {
+  if (!audioCache.airEngine) return;
   audioCache.airEngine.forEach(node => node.stop());
   audioCache.airEngine = null;
 }
