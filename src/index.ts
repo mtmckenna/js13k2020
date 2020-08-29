@@ -199,7 +199,8 @@ const rightMailboxes: SideSprite[] = range(2).map(n => {
     minTimeOffScreen: 1,
     lastOnScreenAt: null,
     roadPercent: random(),
-    active: false
+    active: false,
+    dimensions: BIG_SPRITE_DIMENSIONS
   };
 });
 
@@ -217,7 +218,8 @@ const golds: SideSprite[] = range(1).map(n => {
     minTimeOffScreen: 10,
     lastOnScreenAt: null,
     roadPercent: random(),
-    active: false
+    active: false,
+    dimensions: SPRITE_DIMENSIONS
   };
 });
 
@@ -235,7 +237,8 @@ const walls: SideSprite[] = range(2).map(n => {
     minTimeOffScreen: 5,
     roadPercent: random(),
     lastOnScreenAt: null,
-    active: false
+    active: false,
+    dimensions: BIG_SPRITE_DIMENSIONS
   };
 });
 
@@ -440,7 +443,7 @@ function drawRoadSprites() {
       ZERO_POS,
       spriteOffset(sprite),
       sprite.i,
-      BIG_SPRITE_DIMENSIONS,
+      sprite.dimensions,
       false,
       sprite.alpha
     );
@@ -789,17 +792,6 @@ function drawEnvelopes() {
         ENVELOPE_DIMENSION
       );
     });
-  /*  ctx.drawImage(*/
-  //image,
-  //0,
-  //0,
-  //dimensions,
-  //dimensions,
-  //round(xOffset + pos.x - xScaleOffset),
-  //round(yOffset + pos.y + pos.z + yScaleOffset),
-  //round(dimensions * scale),
-  //round(dimensions * scale)
-  /*);*/
 }
 
 function drawImage(
@@ -1020,6 +1012,7 @@ interface SideSprite {
   minTimeOffScreen: number;
   percentChanceOfSpawning: number;
   active: boolean;
+  dimensions: number;
 }
 
 interface Vector {
@@ -1126,37 +1119,34 @@ function cosPalette(
 
 function overlaps(sprite: SideSprite) {
   const scale = min(sprite.i / height, 1);
-  const r2y = sprite.i + scale * BIG_SPRITE_DIMENSIONS;
+  const r2y = sprite.i + scale * sprite.dimensions; 
 
   const past = r2y >= playerI;
   if (!past) return;
 
   const playerOffset = xCenter;
 
-  //const roadWidth = roadWidths[sprite.i];
-  //const spriteOffset = roadWidth.x1 + (roadWidth.x2 - roadWidth.x1) * sprite.roadPercent - scale * BIG_SPRITE_DIMENSIONS / 2 - player.pos.x;
-
   const r1x = playerOffset - BIG_SPRITE_DIMENSIONS / 2;
-  const r2x = spriteOffset(sprite);
+  const r2x = spriteOffset(sprite) - scale * sprite.dimensions / 2;
   const r1w = BIG_SPRITE_DIMENSIONS;
-  const r2w = BIG_SPRITE_DIMENSIONS * scale;
+  const r2w = sprite.dimensions * scale;
 
   const r1y = playerI + player.pos.y;
   const r1h = BIG_SPRITE_DIMENSIONS;
-  const r2h = BIG_SPRITE_DIMENSIONS * scale;
+  const r2h = sprite.dimensions * scale;
 
   const h = r1y < r2y + r2h && r1y + r1h > r2y ? true : false;
   const w = r1x < r2x + r2w && r1x + r1w > r2x ? true : false;
 
-  /*  ctx.fillStyle = "green";*/
+  //ctx.fillStyle = "green";
   //ctx.fillRect(r2x, r2y, r2w, r2h);
 
   //ctx.fillStyle = "red";
   //ctx.fillRect(r1x, r1y, r1w, r1h);
 
   if (h && w) {
-    /*ctx.fillStyle = "pink";
-    ctx.fillRect(r1x, r1y, r1w, r1h);*/
+    //ctx.fillStyle = "pink";
+    //ctx.fillRect(r1x, r1y, r1w, r1h);
     return true;
   } else {
     return false;
@@ -1194,16 +1184,13 @@ function unsetShake() {
 // parrallax
 // fade out audio
 // brick walls
+// mailboxes two sides
 // lights on truck
-// more usa stuff?
 // particles
 // clouds
 // title screen
 // sounds
 // meter
-// collisions
 // points
 // wheels moving
-// invincibility thing ?
-// put zero back in the middle, collissions happen in screen space,  convert
 // stars on top/bottom

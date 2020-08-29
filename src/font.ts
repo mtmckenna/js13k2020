@@ -273,6 +273,7 @@ const FONT_UNIT_HEIGHT = 5;
 export function drawText(canvas: HTMLCanvasElement, string: string, startX: number = 0, startY: number = 0, pixelHeight: number = 1, color: string = "#000", alpha = 1.0) {
 	const size = pixelHeight / FONT_UNIT_HEIGHT;
 	const context = canvas.getContext("2d");
+  const oldAlpha = context.globalAlpha;
   context.globalAlpha = alpha;
 
 	var needed = [];
@@ -303,4 +304,6 @@ export function drawText(canvas: HTMLCanvasElement, string: string, startX: numb
 		}
 		currX += size + addX;
 	}
+
+  context.globalAlpha = oldAlpha;
 }

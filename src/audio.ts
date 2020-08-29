@@ -32,7 +32,8 @@ function createSound(notes: number[], times: number[], type: OscillatorType) {
 		oscillator.onended = () => playNote(index + 1, oscillators, times);
 		oscillators.push(oscillator);
 	});
-	playNote (0, oscillators, times);
+
+	//playNote(0, oscillators, times);
 }
 
 function playNote (index: number, oscillators: OscillatorNode[], times: number[]) {
@@ -55,8 +56,8 @@ function createEngine(frequencies: number[]): OscillatorNode[] {
 
 export function startGroundEngine() {
   const groundEngine = createGroundEngine()
-  audioCache.groundEngine = groundEngine;
-  audioCache.groundEngine.forEach(node => node.start());
+  //audioCache.groundEngine = groundEngine;
+  //audioCache.groundEngine.forEach(node => node.start());
 }
 
 export function stopGroundEngine() {
@@ -68,8 +69,8 @@ export function stopGroundEngine() {
 
 export function startAirEngine() {
   const airEngine = createAirEngine()
-  audioCache.airEngine = airEngine;
-  audioCache.airEngine.forEach(node => node.start());
+  //audioCache.airEngine = airEngine;
+  //audioCache.airEngine.forEach(node => node.start());
 }
 
 export function stopAirEngine() {
