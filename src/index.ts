@@ -32,7 +32,8 @@ let gameVars: GameVars = {
   ballots: 0,
   lastHitAt: null,
   lastFlashedAt: null,
-  lastTimeDecrementedAt: null
+  lastTimeDecrementedAt: null,
+  lastFlashedInstructionsAt: null
 };
 
 const { abs, random, floor, round, min, max, sin, sign } = Math;
@@ -59,6 +60,7 @@ const SECOND_ROW_Y = UI_PADDING * 2 + FONT_SIZE;
 const MAX_FUNDING_BAR = width - UI_PADDING * 2;
 const HIT_TIME = 7;
 const FLASH_TIME = 1.5;
+const INSTRUCTIONS_FLASH_TIME = 5;
 const FUNDING_HIT_AMOUNT = 5;
 const MAILBOX_HIT_AMOUNT = 5;
 const PLAYER_EDGE = width / 2;
@@ -70,7 +72,7 @@ const ENVELOPE_DIMENSION = 16;
 const ENVELOPE_TIME = 5;
 const ENVELOPE_DELAY = 100;
 
-let engineStarted = false;
+let instructionsAlpha = 1.0;
 
 const OVLERLAP_MAP = {
   wall: handleWallOverlap,
@@ -249,10 +251,22 @@ const normalTime = 50;
 const SIDE_SPRITE_INCREASE = 1.8;
 const SIDE_SPRIDE_SLOW_INCREASE = 1.8 / SLOW_MULTIPLIER;
 const jumpTime = normalTime * SLOW_MULTIPLIER;
+let turningSpeed = TURNING_SPEED;
 let xOffset = 0;
 
 function tick(t: number) {
   requestAnimationFrame(tick);
+
+  //const divisor = jumping ? jumpTime : normalTime;
+  const divisor = normalTime;
+  turningSpeed = TURNING_SPEED;
+
+  /*const turningSpeed = jumping
+    ? TURNING_SPEED / SLOW_MULTIPLIER
+    : TURNING_SPEED;*/
+
+  gameTime += 10 / divisor;
+
   if (gameVars.started) {
     runGame(t);
   } else {
@@ -271,22 +285,17 @@ function runTitleScreen(t:number) {
   drawWhiteHouse();
   drawText(canvas, "VOTE BY MAIL:", UI_PADDING + 10 * UI_PADDING, UI_PADDING, FONT_SIZE);
   drawText(canvas, "FUNDING NOT FOUND", UI_PADDING + 4 * UI_PADDING, SECOND_ROW_Y, FONT_SIZE);
-  drawText(canvas, "TAP OR PRESS KEY", 8 * UI_PADDING, UI_PADDING * 40, FONT_SIZE);
-  drawText(canvas, "TO PLAY", 24 * UI_PADDING, UI_PADDING * 40 + SECOND_ROW_Y, FONT_SIZE);
+  drawText(canvas, "TAP OR PRESS KEY", 8 * UI_PADDING, UI_PADDING * 40, FONT_SIZE, "#000", instructionsAlpha);
+  drawText(canvas, "TO PLAY", 24 * UI_PADDING, UI_PADDING * 40 + SECOND_ROW_Y, FONT_SIZE, "#000", instructionsAlpha);
+
+  if (!instructionsFlashedRecently()) {
+    gameVars.lastFlashedInstructionsAt = gameTime;
+    instructionsAlpha = instructionsAlpha === 1.0 ? 0.0 : 1.0;
+  }
 }
 
 function runGame(t: number) {
   ctx.globalAlpha = 1.0;
-
-  //const divisor = jumping ? jumpTime : normalTime;
-  const divisor = normalTime;
-  const turningSpeed = TURNING_SPEED;
-
-  /*const turningSpeed = jumping
-    ? TURNING_SPEED / SLOW_MULTIPLIER
-    : TURNING_SPEED;*/
-
-  gameTime += 10 / divisor;
 
   if (readyToDecrementTime()) updateTimeLeft();
 
@@ -571,6 +580,10 @@ function flashedRecently() {
   return timeSinceLastFlash() < FLASH_TIME;
 }
 
+function instructionsFlashedRecently() {
+  return timeSinceLastInstructionFlash() < INSTRUCTIONS_FLASH_TIME;
+}
+
 function timeSinceLastTimeDecrement() {
   return gameTime - gameVars.lastTimeDecrementedAt;
 }
@@ -581,6 +594,10 @@ function timeSinceLastHit() {
 
 function timeSinceLastFlash() {
   return gameTime - gameVars.lastFlashedAt;
+}
+
+function timeSinceLastInstructionFlash() {
+  return gameTime - gameVars.lastFlashedInstructionsAt;
 }
 
 function spriteReadyToBeOnScreen(sprite: SideSprite) {
@@ -986,6 +1003,7 @@ interface GameVars {
   lastHitAt: number;
   lastFlashedAt: number;
   lastTimeDecrementedAt: number;
+  lastFlashedInstructionsAt: number;
 }
 
 //interface RoadChunk {

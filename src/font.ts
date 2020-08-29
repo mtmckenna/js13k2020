@@ -270,9 +270,10 @@ const letters = {
 };
 
 const FONT_UNIT_HEIGHT = 5;
-export function drawText(canvas: HTMLCanvasElement, string: string, startX: number = 0, startY: number = 0, pixelHeight: number = 1, color: string = "#000") {
+export function drawText(canvas: HTMLCanvasElement, string: string, startX: number = 0, startY: number = 0, pixelHeight: number = 1, color: string = "#000", alpha = 1.0) {
 	const size = pixelHeight / FONT_UNIT_HEIGHT;
 	const context = canvas.getContext("2d");
+  context.globalAlpha = alpha;
 
 	var needed = [];
 	string = string.toUpperCase(); // because I only did uppercase letters
