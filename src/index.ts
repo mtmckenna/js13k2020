@@ -290,7 +290,6 @@ function runTitleScreen(t: number) {
     drawRoad(i, textureCoord);
   }
 
-
   //drawGround(road1);
   drawWhiteHouse();
 
