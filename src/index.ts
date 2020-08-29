@@ -1,6 +1,5 @@
-
 //window.onerror = function(message, source, lineno, colno, error) {
-  //logBox.innerText += `${message}\n`;
+//logBox.innerText += `${message}\n`;
 //}
 
 import { drawText } from "./font";
@@ -10,7 +9,7 @@ import {
   stopGroundEngine,
   startAirEngine,
   stopAirEngine,
-  playTheThing,
+  playTheThing
 } from "./audio";
 
 import carImageData from "../assets/mailtruck-big.png";
@@ -175,11 +174,11 @@ const player: Sprite = {
   activatedAt: 1
 };
 
-const envelopes: Sprite[] = range(MAILBOX_HIT_AMOUNT * 5).map(_ => {
+const envelopes: Sprite[] = range(MAILBOX_HIT_AMOUNT * 20).map(_ => {
   return {
     image: envelopeImage,
-    pos: { x: 0, y: 0, z: 0 },
-    vel: { x: 1, y: 1, z: 0 },
+    pos: { x: randomIntBetween(0, width), y: randomIntBetween(-height, 0), z: 0 },
+    vel: { x: randomFloatBetween(-1, 1), y: 1, z: 0 },
     alpha: 1,
     active: false,
     activatedAt: 0
@@ -255,6 +254,7 @@ let turningSpeed = TURNING_SPEED;
 let xOffset = 0;
 
 function tick(t: number) {
+  ctx.globalAlpha = 1.0;
   requestAnimationFrame(tick);
 
   //const divisor = jumping ? jumpTime : normalTime;
@@ -270,7 +270,7 @@ function tick(t: number) {
   if (gameVars.started) {
     runGame(t);
   } else {
-    runTitleScreen(t); 
+    runTitleScreen(t);
   }
 }
 
@@ -278,15 +278,68 @@ function isButtonPressed() {
   return inputState.left || inputState.right || inputState.jump;
 }
 
-function runTitleScreen(t:number) {
+function runTitleScreen(t: number) {
   if (isButtonPressed()) gameVars.started = true;
   drawSky();
+
+  xOffset = xCenter;
+  let textureCoord = 0;
   drawGround(road1);
+  for (let i = zMap.length - 1; i > skyHeight; i--) {
+    textureCoord += MAX_TEX / TEX_DEN;
+    drawRoad(i, textureCoord);
+  }
+
+
+  //drawGround(road1);
   drawWhiteHouse();
-  drawText(canvas, "VOTE BY MAIL:", UI_PADDING + 10 * UI_PADDING, UI_PADDING, FONT_SIZE);
-  drawText(canvas, "FUNDING NOT FOUND", UI_PADDING + 4 * UI_PADDING, SECOND_ROW_Y, FONT_SIZE);
-  drawText(canvas, "TAP OR PRESS KEY", 8 * UI_PADDING, UI_PADDING * 40, FONT_SIZE, "#000", instructionsAlpha);
-  drawText(canvas, "TO PLAY", 24 * UI_PADDING, UI_PADDING * 40 + SECOND_ROW_Y, FONT_SIZE, "#000", instructionsAlpha);
+
+  envelopes.forEach(envelope => {
+    if (envelope.pos.y > height) {
+      envelope.pos.x = randomIntBetween(0, width);
+      envelope.pos.y = randomIntBetween(-height, 0);
+    }
+
+    envelope.pos.x += envelope.vel.x;
+    envelope.pos.y += envelope.vel.y;
+
+    const { x, y } = envelope.pos;
+    ctx.globalAlpha = 1.0;
+    ctx.drawImage(envelope.image, x, y, ENVELOPE_DIMENSION, ENVELOPE_DIMENSION);
+  });
+
+  drawText(
+    canvas,
+    "VOTE BY MAIL:",
+    UI_PADDING + 10 * UI_PADDING,
+    UI_PADDING,
+    FONT_SIZE
+  );
+  drawText(
+    canvas,
+    "FUNDING NOT FOUND",
+    UI_PADDING + 4 * UI_PADDING,
+    SECOND_ROW_Y,
+    FONT_SIZE
+  );
+  drawText(
+    canvas,
+    "TAP OR PRESS KEY",
+    8 * UI_PADDING,
+    UI_PADDING * 40,
+    FONT_SIZE,
+    "#000",
+    instructionsAlpha
+  );
+  drawText(
+    canvas,
+    "TO PLAY",
+    24 * UI_PADDING,
+    UI_PADDING * 40 + SECOND_ROW_Y,
+    FONT_SIZE,
+    "#000",
+    instructionsAlpha
+  );
 
   if (!instructionsFlashedRecently()) {
     gameVars.lastFlashedInstructionsAt = gameTime;
@@ -295,8 +348,6 @@ function runTitleScreen(t:number) {
 }
 
 function runGame(t: number) {
-  ctx.globalAlpha = 1.0;
-
   if (readyToDecrementTime()) updateTimeLeft();
 
   realTime = t;
@@ -370,7 +421,6 @@ function runGame(t: number) {
   drawUi();
   drawEnvelopes();
   drawTruck();
-
 }
 
 function drawRoadSprites() {
@@ -632,7 +682,6 @@ function drawGround(fillStyle: string) {
   ctx.fillStyle = fillStyle;
   ctx.fillRect(0, skyHeight, width, groundHeight);
 }
-
 
 function drawWhiteHouse() {
   drawImage(
@@ -1140,7 +1189,6 @@ function unsetShake() {
   if (!canvas.classList.contains(SHAKE_CLASS_NAME)) return;
   canvas.classList.remove(SHAKE_CLASS_NAME);
 }
-
 
 // TODO:
 // do better with garbage collection
