@@ -17,15 +17,16 @@ import carImageData from "../assets/mailtruck-big.png";
 import brickWallImageData from "../assets/brick-wall.png";
 import goldImageData from "../assets/gold.png";
 import mailboxImageData from "../assets/mailbox-big.png";
-import whitehouse1ImageData from "../assets/whitehouse1-big.png";
-import whitehouse2ImageData from "../assets/whitehouse2-big.png";
-import whitehouse3ImageData from "../assets/whitehouse3-big.png";
+import wh1ImageData from "../assets/whitehouse1-big.png";
+import wh2ImageData from "../assets/whitehouse2-big.png";
+import wh3ImageData from "../assets/whitehouse3-big.png";
 import city1ImageData from "../assets/city1-big.png";
 import city2ImageData from "../assets/city2-big.png";
 import city3ImageData from "../assets/city3-big.png";
 import envelopeImageData from "../assets/envelope2.png";
 
 let gameVars: GameVars = {
+  started: false,
   funding: 100,
   timeLeft: 90,
   ballots: 0,
@@ -98,9 +99,16 @@ envelopeImage.src = envelopeImageData;
 const wh1 = new Image();
 const wh2 = new Image();
 const wh3 = new Image();
-wh1.src = city1ImageData;
-wh2.src = city2ImageData;
-wh3.src = city3ImageData;
+wh1.src = wh1ImageData;
+wh2.src = wh2ImageData;
+wh3.src = wh3ImageData;
+
+const city1 = new Image();
+const city2 = new Image();
+const city3 = new Image();
+city1.src = city1ImageData;
+city2.src = city2ImageData;
+city3.src = city3ImageData;
 
 const whStartPos =
   width / 2 - (BIG_SPRITE_DIMENSIONS * 3) / 2 + BIG_SPRITE_DIMENSIONS / 2;
@@ -152,7 +160,7 @@ for (let i = 0; i < zMap.length; i++) {
 const horizonI = skyHeight;
 const xCenter = floor(width / 2);
 
-const logBox: HTMLElement = document.querySelector("#log");
+//const logBox: HTMLElement = document.querySelector("#log");
 
 let playerIForGround50 = 50;
 const playerI = playerIForGround50 + horizonI;
@@ -241,15 +249,34 @@ const normalTime = 50;
 const SIDE_SPRITE_INCREASE = 1.8;
 const SIDE_SPRIDE_SLOW_INCREASE = 1.8 / SLOW_MULTIPLIER;
 const jumpTime = normalTime * SLOW_MULTIPLIER;
-let lastTime = -1;
 let xOffset = 0;
+
 function tick(t: number) {
-  ctx.globalAlpha = 1.0;
-  if (lastTime === -1) {
-    lastTime = t;
-    requestAnimationFrame(tick);
-    return;
+  requestAnimationFrame(tick);
+  if (gameVars.started) {
+    runGame(t);
+  } else {
+    runTitleScreen(t); 
   }
+}
+
+function isButtonPressed() {
+  return inputState.left || inputState.right || inputState.jump;
+}
+
+function runTitleScreen(t:number) {
+  if (isButtonPressed()) gameVars.started = true;
+  drawSky();
+  drawGround(road1);
+  drawWhiteHouse();
+  drawText(canvas, "VOTE BY MAIL:", UI_PADDING + 10 * UI_PADDING, UI_PADDING, FONT_SIZE);
+  drawText(canvas, "FUNDING NOT FOUND", UI_PADDING + 4 * UI_PADDING, SECOND_ROW_Y, FONT_SIZE);
+  drawText(canvas, "TAP OR PRESS KEY", 8 * UI_PADDING, UI_PADDING * 40, FONT_SIZE);
+  drawText(canvas, "TO PLAY", 24 * UI_PADDING, UI_PADDING * 40 + SECOND_ROW_Y, FONT_SIZE);
+}
+
+function runGame(t: number) {
+  ctx.globalAlpha = 1.0;
 
   //const divisor = jumping ? jumpTime : normalTime;
   const divisor = normalTime;
@@ -264,12 +291,11 @@ function tick(t: number) {
   if (readyToDecrementTime()) updateTimeLeft();
 
   realTime = t;
-  requestAnimationFrame(tick);
 
   handlePlayerInput(turningSpeed);
 
   drawSky();
-  drawGround();
+  drawGround(road1);
   drawCity();
   let textureCoord = 0;
   let spriteIndex = 0;
@@ -335,6 +361,7 @@ function tick(t: number) {
   drawUi();
   drawEnvelopes();
   drawTruck();
+
 }
 
 function drawRoadSprites() {
@@ -584,29 +611,54 @@ function drawSky() {
   ctx.fillRect(0, 0, width, height);
 }
 
-function drawGround() {
-  ctx.fillStyle = road1;
+function drawGround(fillStyle: string) {
+  ctx.fillStyle = fillStyle;
   ctx.fillRect(0, skyHeight, width, groundHeight);
 }
 
-function drawCity() {
-  const whOffset = xCenter - xOffset;
+
+function drawWhiteHouse() {
   drawImage(
     wh1,
     ZERO_POS,
-    whOffset + whStartPos,
+    whStartPos,
     horizonI - BIG_SPRITE_DIMENSIONS,
     BIG_SPRITE_DIMENSIONS
   );
   drawImage(
     wh2,
     ZERO_POS,
-    whOffset + whStartPos + BIG_SPRITE_DIMENSIONS,
+    whStartPos + BIG_SPRITE_DIMENSIONS,
     horizonI - BIG_SPRITE_DIMENSIONS,
     BIG_SPRITE_DIMENSIONS
   );
   drawImage(
     wh3,
+    ZERO_POS,
+    whStartPos + 2 * BIG_SPRITE_DIMENSIONS,
+    horizonI - BIG_SPRITE_DIMENSIONS,
+    BIG_SPRITE_DIMENSIONS
+  );
+}
+
+function drawCity() {
+  const whOffset = xCenter - xOffset;
+  drawImage(
+    city1,
+    ZERO_POS,
+    whOffset + whStartPos,
+    horizonI - BIG_SPRITE_DIMENSIONS,
+    BIG_SPRITE_DIMENSIONS
+  );
+  drawImage(
+    city2,
+    ZERO_POS,
+    whOffset + whStartPos + BIG_SPRITE_DIMENSIONS,
+    horizonI - BIG_SPRITE_DIMENSIONS,
+    BIG_SPRITE_DIMENSIONS
+  );
+  drawImage(
+    city3,
     ZERO_POS,
     whOffset + whStartPos + 2 * BIG_SPRITE_DIMENSIONS,
     horizonI - BIG_SPRITE_DIMENSIONS,
@@ -777,11 +829,6 @@ const pointerState: PointerState = {
 };
 
 window.addEventListener("keydown", (e: KeyboardEvent) => {
-  if (!engineStarted) {
-    startGroundEngine();
-    engineStarted = true;
-  }
-
   switch (e.key) {
     case "ArrowLeft":
       inputState.left = true;
@@ -932,6 +979,7 @@ interface PointerState {
 }
 
 interface GameVars {
+  started: boolean;
   ballots: number;
   funding: number;
   timeLeft: number;

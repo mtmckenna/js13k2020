@@ -259,8 +259,15 @@ const letters = {
             [, ,],
             [, ,],
             [, ,]
+        ],
+        ':':[
+            [0,1,0],
+            [0,1,0],
+            [0,0,0],
+            [0,1,0],
+            [0,1,0]
         ]
-    };
+};
 
 const FONT_UNIT_HEIGHT = 5;
 export function drawText(canvas: HTMLCanvasElement, string: string, startX: number = 0, startY: number = 0, pixelHeight: number = 1, color: string = "#000") {
