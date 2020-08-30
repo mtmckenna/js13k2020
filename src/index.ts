@@ -52,12 +52,13 @@ const FLASH_TIME = 1.5;
 const INSTRUCTIONS_FLASH_TIME = 5;
 const FUNDING_HIT_AMOUNT = 10;
 const MAILBOX_HIT_AMOUNT = 5;
+const GOLD_HIT_AMOUNT = 5;
 const PLAYER_EDGE = width / 2;
 const GAME_UPDATE_TIME = 10;
 const MAX_ROAD_WIDTH = width * ROAD_WIDTH_PERCENT;
 const SHAKE_CLASS_NAME = "shake";
 const ALPHA_INCREASE_AMOUNT = 0.1;
-const ENVELOPE_DIMENSION = 16;
+const COLLECTABLE_DIMENSION = 16;
 const ENVELOPE_TIME = 5;
 const ENVELOPE_DELAY = 100;
 const GAME_OVER_FUNDING_TEXT = "RAN OUT OF FUNDS";
@@ -183,7 +184,8 @@ const player: Sprite = {
   vel: { x: 0, y: 0, z: 0 },
   alpha: 1,
   active: true,
-  activatedAt: 1
+  activatedAt: 1,
+  dimensions: BIG_SPRITE_DIMENSIONS
 };
 
 const envelopes: Sprite[] = range(MAILBOX_HIT_AMOUNT * 20).map(_ => {
@@ -193,7 +195,21 @@ const envelopes: Sprite[] = range(MAILBOX_HIT_AMOUNT * 20).map(_ => {
     vel: { x: randomFloatBetween(-1, 1), y: 1, z: 0 },
     alpha: 1,
     active: false,
-    activatedAt: 0
+    activatedAt: 0,
+    dimensions: SPRITE_DIMENSIONS
+  };
+});
+
+// These golds are the ones that are for the UI, not for picking up in the road
+const golds2: Sprite[] = range(GOLD_HIT_AMOUNT * 20).map(_ => {
+  return {
+    image: goldImage,
+    pos: { x: randomIntBetween(0, width), y: randomIntBetween(-height, 0), z: 0 },
+    vel: { x: randomFloatBetween(-1, 1), y: 1, z: 0 },
+    alpha: 1,
+    active: false,
+    activatedAt: 0,
+    dimensions: SPRITE_DIMENSIONS
   };
 });
 
@@ -258,9 +274,9 @@ const TEX_DEN = MAX_TEX * 10;
 const TURNING_SPEED = 4.8;
 
 const SLOW_MULTIPLIER = 4;
-const normalTime = 50;
-const SIDE_SPRITE_INCREASE = 1.8;
-const SIDE_SPRIDE_SLOW_INCREASE = 1.8 / SLOW_MULTIPLIER;
+const normalTime = 70;
+const SIDE_SPRITE_INCREASE = 1.4;
+const SIDE_SPRIDE_SLOW_INCREASE = SIDE_SPRITE_INCREASE / SLOW_MULTIPLIER;
 const jumpTime = normalTime * SLOW_MULTIPLIER;
 let turningSpeed = TURNING_SPEED;
 let xOffset = 0;
@@ -323,7 +339,7 @@ function runTitleScreen(t: number) {
 
     const { x, y } = envelope.pos;
     ctx.globalAlpha = 1.0;
-    ctx.drawImage(envelope.image, x, y, ENVELOPE_DIMENSION, ENVELOPE_DIMENSION);
+    ctx.drawImage(envelope.image, x, y, COLLECTABLE_DIMENSION, COLLECTABLE_DIMENSION);
   });
 
   drawText(
@@ -435,6 +451,7 @@ function runGame(t: number) {
   drawRoadSprites();
   if (!gameVars.gameOver) drawUi();
   drawEnvelopes();
+  drawGolds();
   drawTruck();
 
   if (gameVars.funding <= 0) {
@@ -674,20 +691,34 @@ function handlePlayerInput(turningSpeed: number) {
 }
 
 function handleOverlap(sprite: SideSprite) {
-  if (inGracePeriod()) return;
+  //if (inGracePeriod()) return;
   if (OVLERLAP_MAP[sprite.name]) OVLERLAP_MAP[sprite.name](sprite);
   playTheThing();
   deactivateSprite(sprite);
 }
 
 function handleWallOverlap() {
+  if (inGracePeriod()) return;
   gameVars.lastHitAt = gameTime;
   gameVars.funding = max(gameVars.funding - FUNDING_HIT_AMOUNT, 0);
   setShake();
 }
 
-function handleGoldOverlap() {
-  gameVars.funding = min(gameVars.funding + FUNDING_HIT_AMOUNT, 100);
+function handleGoldOverlap(sprite: SideSprite) {
+  gameVars.funding = min(gameVars.funding + FUNDING_HIT_AMOUNT, 120);
+  const inactive = golds2.filter(gold => gold.active !== true);
+  const toActivate = golds2.slice(
+    Math.max(inactive.length - GOLD_HIT_AMOUNT, 0)
+  );
+  toActivate.forEach((gold, i) => {
+    setTimeout(() => {
+      gold.active = true;
+      gold.activatedAt = gameTime;
+      gold.pos.y = playerI;
+      gold.pos.x = spriteOffset(sprite);
+    }, ENVELOPE_DELAY * i);
+  });
+  gameVars.ballots += min(GOLD_HIT_AMOUNT, 999);
 }
 
 function handleMailboxOverlap(sprite: SideSprite) {
@@ -699,8 +730,6 @@ function handleMailboxOverlap(sprite: SideSprite) {
     setTimeout(() => {
       envelope.active = true;
       envelope.activatedAt = gameTime;
-      envelope.pos.y = sprite.i;
-      envelope.pos.x = spriteOffset(sprite);
       envelope.pos.y = playerI;
       envelope.pos.x = spriteOffset(sprite);
     }, ENVELOPE_DELAY * i);
@@ -900,6 +929,27 @@ function getEnvelopePosition(envelope: Sprite): { x: number; y: number } {
   return { x: x2, y: y2 };
 }
 
+function drawGolds() {
+  golds2
+    .filter(sprite => sprite.active)
+    .forEach(gold => {
+      const { x, y } = getEnvelopePosition(gold);
+
+      if (x === 0 && y === 0) {
+        gold.active = false;
+        return;
+      }
+
+      ctx.drawImage(
+        gold.image,
+        x,
+        y,
+        COLLECTABLE_DIMENSION,
+        COLLECTABLE_DIMENSION
+      );
+    });
+}
+
 function drawEnvelopes() {
   envelopes
     .filter(sprite => sprite.active)
@@ -915,8 +965,8 @@ function drawEnvelopes() {
         envelope.image,
         x,
         y,
-        ENVELOPE_DIMENSION,
-        ENVELOPE_DIMENSION
+        COLLECTABLE_DIMENSION,
+        COLLECTABLE_DIMENSION
       );
     });
 }
@@ -1062,7 +1112,7 @@ window.addEventListener("touchend", () => {
   if (realTime - pointerState.downAt < TOUCH_TIME) {
     jump();
     pointerState.upAt = gameTime;
-    logBox.innerText += `HI ${gameTime}\n`;
+    //logBox.innerText += `HI ${gameTime}\n`;
   }
   pointerState.downAt = null;
 });
@@ -1130,6 +1180,7 @@ interface Sprite {
   alpha: number;
   active: boolean;
   activatedAt: number;
+  dimensions: number;
 }
 
 interface SideSprite {
