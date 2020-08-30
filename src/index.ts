@@ -30,9 +30,14 @@ const canvas: HTMLCanvasElement = document.querySelector(
   "#game"
 ) as HTMLCanvasElement;
 const ctx: CanvasRenderingContext2D = canvas.getContext("2d");
+
 let width = 320;
 let height = 240;
-const aspectRatio = width / height;
+let aspectRatio = width / height;
+
+canvas.height = height;
+canvas.width = width;
+
 const SPRITE_DIMENSIONS = 32;
 const BIG_SPRITE_DIMENSIONS = 64;
 const JUMP_VELOCITY = -5;
@@ -49,14 +54,14 @@ const MAX_FUNDING_BAR = width - UI_PADDING * 2;
 const HIT_TIME = 1;
 const FLASH_TIME = 0.25;
 const INSTRUCTIONS_FLASH_TIME = 5;
-const FUNDING_HIT_AMOUNT = 10;
+const FUNDING_HIT_AMOUNT = 25;
 const MAILBOX_HIT_AMOUNT = 5;
 const GOLD_HIT_AMOUNT = 5;
 const PLAYER_EDGE = width / 2;
-const GAME_UPDATE_TIME = 10;
+const GAME_UPDATE_TIME = 5;
 const MAX_ROAD_WIDTH = width * ROAD_WIDTH_PERCENT;
 const SHAKE_CLASS_NAME = "shake";
-const ALPHA_INCREASE_AMOUNT = 0.1;
+const ALPHA_INCREASE_AMOUNT = 0.075;
 const COLLECTABLE_DIMENSION = 16;
 const ENVELOPE_TIME = 5;
 const ENVELOPE_DELAY = 100;
@@ -67,6 +72,7 @@ const RESTART_TIMEOUT_TIME = 1000;
 const START_TIME = 90;
 const START_FUNDING = 100;
 const TOUCH_TIME = 300;
+const SHADOW_COLOR = "#EEE";
 
 let gameOverText = "";
 let instructionsAlpha = 1.0;
@@ -90,9 +96,6 @@ const OVLERLAP_MAP = {
   gold: handleGoldOverlap,
   mailbox: handleMailboxOverlap
 };
-
-canvas.height = height;
-canvas.width = width;
 
 const carImage = new Image();
 carImage.src = carImageData;
@@ -388,6 +391,7 @@ function runTitleScreen() {
     UI_PADDING * 40,
     FONT_SIZE,
     "#000",
+    SHADOW_COLOR,
     instructionsAlpha
   );
   drawText(
@@ -397,6 +401,7 @@ function runTitleScreen() {
     UI_PADDING * 40 + SECOND_ROW_Y,
     FONT_SIZE,
     "#000",
+    SHADOW_COLOR,
     instructionsAlpha
   );
 }
@@ -631,6 +636,7 @@ function gameOver() {
       UI_PADDING * 40,
       FONT_SIZE,
       "#000",
+      SHADOW_COLOR,
       instructionsAlpha
     );
 
@@ -642,6 +648,7 @@ function gameOver() {
       UI_PADDING * 40 + SECOND_ROW_Y,
       FONT_SIZE,
       "#000",
+      SHADOW_COLOR,
       instructionsAlpha
     );
   }
@@ -695,7 +702,6 @@ function handlePlayerInput(turningSpeed: number) {
 }
 
 function handleOverlap(sprite: SideSprite) {
-  //if (inGracePeriod()) return;
   if (OVLERLAP_MAP[sprite.name]) OVLERLAP_MAP[sprite.name](sprite);
   playTheThing();
   deactivateSprite(sprite);
@@ -709,7 +715,7 @@ function handleWallOverlap() {
 }
 
 function handleGoldOverlap(sprite: SideSprite) {
-  gameVars.funding = min(gameVars.funding + FUNDING_HIT_AMOUNT, 120);
+  gameVars.funding = min(gameVars.funding + GOLD_HIT_AMOUNT, START_FUNDING);
   const inactive = golds2.filter(gold => gold.active !== true);
   const toActivate = golds2.slice(
     Math.max(inactive.length - GOLD_HIT_AMOUNT, 0)
@@ -722,7 +728,6 @@ function handleGoldOverlap(sprite: SideSprite) {
       gold.pos.x = spriteOffset(sprite);
     }, ENVELOPE_DELAY * i);
   });
-  gameVars.ballots += min(GOLD_HIT_AMOUNT, 999);
 }
 
 function handleMailboxOverlap(sprite: SideSprite) {
@@ -926,7 +931,7 @@ function drawFundingMeter() {
   ctx.fillStyle =
     gameVars.funding < 20 ? BAD_FUNDING_COLOR : GOOD_FUNDING_COLOR;
   const width = floor((MAX_FUNDING_BAR * gameVars.funding) / 100);
-  ctx.fillRect(UI_PADDING, SECOND_ROW_Y, width, FONT_SIZE);
+  ctx.fillRect(UI_PADDING, SECOND_ROW_Y, width, FONT_SIZE + 1);
   drawText(canvas, "FUNDING", UI_PADDING, SECOND_ROW_Y, FONT_SIZE);
 }
 
@@ -1378,18 +1383,13 @@ function unsetShake() {
 
 // TODO:
 // parrallax
-// slow down car when hitting wall
-// handle time out
-// handle funding out
 // fade out audio
 // brick walls
 // mailboxes two sides
 // lights on truck
 // particles
 // clouds
-// title screen
 // sounds
-// meter
 // points
 // wheels moving
 // stars on top/bottom

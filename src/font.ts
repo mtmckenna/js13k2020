@@ -1,3 +1,5 @@
+const { floor } = Math;
+
 // From https://github.com/PaulBGD/PixelFont/blob/master/script.js
 // prettier-ignore
 const letters = {
@@ -270,7 +272,7 @@ const letters = {
 };
 
 const FONT_UNIT_HEIGHT = 5;
-export function drawText(canvas: HTMLCanvasElement, string: string, startX: number = 0, startY: number = 0, pixelHeight: number = 1, color: string = "#000", alpha = 1.0) {
+export function drawText(canvas: HTMLCanvasElement, string: string, startX: number = 0, startY: number = 0, pixelHeight: number = 1, color: string = "#000", bgColor = "#CCC", alpha = 1.0) {
 	const size = pixelHeight / FONT_UNIT_HEIGHT;
 	const context = canvas.getContext("2d");
   const oldAlpha = context.globalAlpha;
@@ -286,7 +288,6 @@ export function drawText(canvas: HTMLCanvasElement, string: string, startX: numb
 		}
 	}
 
-	context.fillStyle = color;
 	var currX = 0;
 	for (i = 0; i < needed.length; i++) {
 		letter = needed[i];
@@ -296,7 +297,15 @@ export function drawText(canvas: HTMLCanvasElement, string: string, startX: numb
 			var row = letter[y];
 			for (var x = 0; x < row.length; x++) {
 				if (row[x]) {
-					context.fillRect(startX + currX + x * size, startY + currY, size, size);
+          const x1 = floor(startX + currX + x * size);
+          const y1 = floor(startY + currY);
+          const x2 = floor(startX + currX + x * size + 1);
+          const y2 = floor(startY + currY + 1);
+
+	        context.fillStyle = bgColor;
+					context.fillRect(x2, y2, size, size);
+	        context.fillStyle = color;
+					context.fillRect(x1, y1, size, size);
 				}
 			}
 			addX = Math.max(addX, row.length * size);
