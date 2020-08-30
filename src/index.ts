@@ -845,7 +845,6 @@ function drawTruck() {
 
   const frameOffset = nextFrame * player.dimensions;
   player.frame = nextFrame;
-  console.log(frame, nextFrame);
 
   drawImage(
     player.image,
@@ -1056,6 +1055,7 @@ async function load() {
   requestAnimationFrame(tick);
   const image = new Image();
   image.src = imageData;
+  addFavicon();
   rightMailboxes.forEach(mb => (mb.image = image));
   sideSprites.push(...rightMailboxes, ...golds, ...walls);
   console.log(sideSprites);
@@ -1195,6 +1195,14 @@ window.addEventListener("click", () => {
 window.addEventListener("resize", resize);
 
 window.addEventListener("load", load);
+
+function addFavicon() {
+  const link = document.createElement("link");
+  link.type = "image/png'";
+  link.rel = "icon";
+  link.href = envelopeImageData;
+  document.getElementsByTagName("head")[0].appendChild(link);
+}
 
 async function flipImage(imageData: any): Promise<string> {
   const imgCanvas = document.createElement("canvas") as HTMLCanvasElement;
@@ -1425,6 +1433,4 @@ function unsetShake() {
 // clouds
 // sounds
 // points
-// wheels moving
 // stars on top/bottom
-// icon
