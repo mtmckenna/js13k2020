@@ -41,8 +41,8 @@ canvas.width = width;
 
 const SPRITE_DIMENSIONS = 32;
 const BIG_SPRITE_DIMENSIONS = 64;
-const JUMP_VELOCITY = -5;
-const GRAVITY = 0.15;
+const JUMP_VELOCITY = -10;
+const GRAVITY = 0.3;
 const MAX_NEGATIVE_VEL = JUMP_VELOCITY;
 const MAX_POSITIVE_VEL = -JUMP_VELOCITY;
 const GROUND_PERCENT = 0.5;
@@ -1150,7 +1150,7 @@ window.addEventListener("touchmove", (e: TouchEvent) => {
   const xPercentage = e.touches[0].clientX / window.innerWidth;
   const x = width * xPercentage;
 
-  const diff = (x - pointerState.x) / 4;
+  const diff = (x - pointerState.x);
   player.pos.x = pointerState.playerX + diff;
 });
 
@@ -1342,11 +1342,11 @@ function overlaps(sprite: SideSprite) {
   const h = r1y < r2y + r2h && r1y + r1h > r2y ? true : false;
   const w = r1x < r2x + r2w && r1x + r1w > r2x ? true : false;
 
-  //ctx.fillStyle = "green";
-  //ctx.fillRect(r2x, r2y, r2w, r2h);
+  /*ctx.fillStyle = "green";
+  ctx.fillRect(r2x, r2y, r2w, r2h);
 
-  //ctx.fillStyle = "red";
-  //ctx.fillRect(r1x, r1y, r1w, r1h);
+  ctx.fillStyle = "red";
+  ctx.fillRect(r1x, r1y, r1w, r1h);*/
 
   if (h && w) {
     //ctx.fillStyle = "pink";
