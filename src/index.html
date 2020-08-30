@@ -24,6 +24,7 @@
         min-height: -moz-available;
         min-height: -webkit-fill-available;
         min-height: fill-available;
+        height: 100%;
       }
 
       html {
@@ -56,7 +57,6 @@
 
       html,
       body {
-        height: 100%;
         width: 100%;
         position: fixed;
         overflow: hidden;
@@ -107,7 +107,13 @@
         padding: 5px;
         text-align: center;
         background-color: white;
-        flex-shrink: 0;
+      }
+
+      #canvas-wrapper {
+        text-align: center;
+        display: flex;
+        justify-content: center;
+        height: 100%;
       }
       
 			@keyframes shake {
@@ -127,7 +133,7 @@
   </head>
   <body>
     <div id="parent">
-      <canvas id="game"></canvas>
+      <div id="canvas-wrapper"><canvas id="game"></canvas></div>
       <div class="vbm">
         <a href="https://www.usa.gov/absentee-voting">Visit USA.gov/absentee-voting for more information on voting by mail in your state</a>
       </div>

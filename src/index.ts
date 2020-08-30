@@ -26,6 +26,7 @@ import envelopeImageData from "../assets/envelope2.png";
 
 const { random, floor, round, min, max } = Math;
 
+const canvasWrapper: HTMLElement = document.querySelector("#canvas-wrapper");
 const canvas: HTMLCanvasElement = document.querySelector(
   "#game"
 ) as HTMLCanvasElement;
@@ -1048,17 +1049,18 @@ function updatePlayerPos(x: number, y: number) {
 }
 
 function resize() {
-  const wHeight = window.innerHeight;
-  const wWidth = window.innerWidth;
-  const wAspectRatio = wWidth / wHeight;
+  const rect = canvasWrapper.getBoundingClientRect();
 
-  if (wAspectRatio > aspectRatio) {
-    canvas.style.height = `${wHeight}px`;
-    const w = floor(wHeight * aspectRatio);
+  const { width: canvasWidth, height: canvasHeight } = rect;
+  const canvasAspectRatio =  canvasWidth / canvasHeight;
+
+  if (canvasAspectRatio > aspectRatio) {
+    canvas.style.height = `${canvasHeight}px`;
+    const w = floor(canvasHeight * aspectRatio);
     canvas.style.width = `${w}px`;
   } else {
-    canvas.style.width = `${wWidth}px`;
-    const h = wWidth / aspectRatio;
+    canvas.style.width = `${canvasWidth}px`;
+    const h = canvasWidth / aspectRatio;
     canvas.style.height = `${h}px`;
   }
 }
