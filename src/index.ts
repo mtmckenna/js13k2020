@@ -12,7 +12,7 @@ import {
   playTheThing
 } from "./audio";
 
-import carImageData from "../assets/mailtruck-big.png";
+import carImageData from "../assets/mailtruck-sheet-big.png";
 import brickWallImageData from "../assets/brick-wall.png";
 import goldImageData from "../assets/gold.png";
 import mailboxImageData from "../assets/mailbox-big.png";
@@ -54,6 +54,7 @@ const SECOND_ROW_Y = UI_PADDING * 2 + FONT_SIZE;
 const MAX_FUNDING_BAR = width - UI_PADDING * 2;
 const HIT_TIME = 1;
 const FLASH_TIME = 0.25;
+const ANIMATION_TIME = .25;
 const INSTRUCTIONS_FLASH_TIME = 5;
 const FUNDING_HIT_AMOUNT = 25;
 const MAILBOX_HIT_AMOUNT = 5;
@@ -189,6 +190,8 @@ const player: Sprite = {
   alpha: 1,
   active: true,
   activatedAt: 1,
+  animatedAt: 1,
+  frame: 0,
   dimensions: BIG_SPRITE_DIMENSIONS
 };
 
@@ -204,6 +207,8 @@ const envelopes: Sprite[] = range(MAILBOX_HIT_AMOUNT * 20).map(_ => {
     alpha: 1,
     active: false,
     activatedAt: 0,
+    animatedAt: 0,
+    frame: 0,
     dimensions: SPRITE_DIMENSIONS
   };
 });
@@ -221,6 +226,8 @@ const golds2: Sprite[] = range(GOLD_HIT_AMOUNT * 20).map(_ => {
     alpha: 1,
     active: false,
     activatedAt: 0,
+    animatedAt: 0,
+    frame: 0,
     dimensions: SPRITE_DIMENSIONS
   };
 });
@@ -790,8 +797,16 @@ function flashedRecently() {
   return timeSinceLastFlash() < FLASH_TIME;
 }
 
+function readyToAnimate(sprite: Sprite) {
+  return timeSinceLastAnimated(sprite) > ANIMATION_TIME && !gameVars.gameOver;
+}
+
 function instructionsFlashedRecently() {
   return timeSinceLastInstructionFlash() < INSTRUCTIONS_FLASH_TIME;
+}
+
+function timeSinceLastAnimated(sprite: Sprite) {
+  return gameTime - sprite.animatedAt;
 }
 
 function timeSinceLastTimeDecrement() {
@@ -821,15 +836,28 @@ function timeSinceSpriteOnScreen(sprite: SideSprite) {
 function drawTruck() {
   flashTruck();
 
+  const { frame } = player;
+  let nextFrame = frame;
+  if (readyToAnimate(player)) {
+    nextFrame = ((frame + 1) % 2);
+    player.animatedAt = gameTime;
+  }
+
+  const frameOffset = nextFrame * player.dimensions;
+  player.frame = nextFrame;
+  console.log(frame, nextFrame);
+
   drawImage(
     player.image,
     player.pos,
     // Want car to be at the middle so start there and subtract off the player position
     xCenter - player.pos.x,
     playerI,
-    BIG_SPRITE_DIMENSIONS,
+    player.dimensions,
     true,
-    player.alpha
+    player.alpha,
+    frameOffset,
+    0
   );
 }
 
@@ -994,7 +1022,9 @@ function drawImage(
   yOffset = 0,
   dimensions = SPRITE_DIMENSIONS,
   dontScale = true,
-  alpha = 1
+  alpha = 1,
+  srcXOffset = 0,
+  srcYOffset = 0
 ) {
   let scale = min(yOffset / height, 1) || 1;
   scale = dontScale ? 1 : scale;
@@ -1007,8 +1037,8 @@ function drawImage(
   ctx.globalAlpha = alpha;
   ctx.drawImage(
     image,
-    0,
-    0,
+    srcXOffset,
+    srcYOffset,
     dimensions,
     dimensions,
     round(xOffset + pos.x - xScaleOffset),
@@ -1197,7 +1227,9 @@ interface Sprite {
   alpha: number;
   active: boolean;
   activatedAt: number;
+  animatedAt: number;
   dimensions: number;
+  frame: number;
 }
 
 interface SideSprite {
