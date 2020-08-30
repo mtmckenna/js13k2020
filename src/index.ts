@@ -24,7 +24,6 @@ import city2ImageData from "../assets/city2-big.png";
 import city3ImageData from "../assets/city3-big.png";
 import envelopeImageData from "../assets/envelope2.png";
 
-
 const { random, floor, round, min, max } = Math;
 
 const canvas: HTMLCanvasElement = document.querySelector(
@@ -47,8 +46,8 @@ const UI_PADDING = 4;
 const FONT_SIZE = 20;
 const SECOND_ROW_Y = UI_PADDING * 2 + FONT_SIZE;
 const MAX_FUNDING_BAR = width - UI_PADDING * 2;
-const HIT_TIME = 7;
-const FLASH_TIME = 1.5;
+const HIT_TIME = 1;
+const FLASH_TIME = 0.25;
 const INSTRUCTIONS_FLASH_TIME = 5;
 const FUNDING_HIT_AMOUNT = 10;
 const MAILBOX_HIT_AMOUNT = 5;
@@ -145,6 +144,7 @@ let groundHeight = floor(height * GROUND_PERCENT);
 let roadStartX = (width - width * ROAD_WIDTH_PERCENT) / 2;
 let realTime = null;
 let gameTime = 0;
+let gameTimeAbsolute = 0;
 
 const cameraY = 30;
 const zMap: number[] = [];
@@ -191,7 +191,11 @@ const player: Sprite = {
 const envelopes: Sprite[] = range(MAILBOX_HIT_AMOUNT * 20).map(_ => {
   return {
     image: envelopeImage,
-    pos: { x: randomIntBetween(0, width), y: randomIntBetween(-height, 0), z: 0 },
+    pos: {
+      x: randomIntBetween(0, width),
+      y: randomIntBetween(-height, 0),
+      z: 0
+    },
     vel: { x: randomFloatBetween(-1, 1), y: 1, z: 0 },
     alpha: 1,
     active: false,
@@ -204,7 +208,11 @@ const envelopes: Sprite[] = range(MAILBOX_HIT_AMOUNT * 20).map(_ => {
 const golds2: Sprite[] = range(GOLD_HIT_AMOUNT * 20).map(_ => {
   return {
     image: goldImage,
-    pos: { x: randomIntBetween(0, width), y: randomIntBetween(-height, 0), z: 0 },
+    pos: {
+      x: randomIntBetween(0, width),
+      y: randomIntBetween(-height, 0),
+      z: 0
+    },
     vel: { x: randomFloatBetween(-1, 1), y: 1, z: 0 },
     alpha: 1,
     active: false,
@@ -216,7 +224,11 @@ const golds2: Sprite[] = range(GOLD_HIT_AMOUNT * 20).map(_ => {
 const rightMailboxes: SideSprite[] = range(2).map(() => {
   return {
     image: rightMailboxImage,
-    pos: { x: randomIntBetween(-ROAD_SPRITE_SPAWN_X, ROAD_SPRITE_SPAWN_X), y: 0, z: 0 },
+    pos: {
+      x: randomIntBetween(-ROAD_SPRITE_SPAWN_X, ROAD_SPRITE_SPAWN_X),
+      y: 0,
+      z: 0
+    },
     rect: { x: -1, y: -1, width: -1, height: -1 },
     i: floor(skyHeight),
     iCoord: skyHeight,
@@ -234,7 +246,11 @@ const rightMailboxes: SideSprite[] = range(2).map(() => {
 const golds: SideSprite[] = range(1).map(() => {
   return {
     image: goldImage,
-    pos: { x: randomIntBetween(-ROAD_SPRITE_SPAWN_X, ROAD_SPRITE_SPAWN_X), y: 0, z: 0 },
+    pos: {
+      x: randomIntBetween(-ROAD_SPRITE_SPAWN_X, ROAD_SPRITE_SPAWN_X),
+      y: 0,
+      z: 0
+    },
     rect: { x: -1, y: -1, width: -1, height: -1 },
     i: floor(skyHeight),
     iCoord: skyHeight,
@@ -252,7 +268,11 @@ const golds: SideSprite[] = range(1).map(() => {
 const walls: SideSprite[] = range(2).map(() => {
   return {
     image: wallImage,
-    pos: { x: randomIntBetween(-ROAD_SPRITE_SPAWN_X, ROAD_SPRITE_SPAWN_X), y: 0, z: 0 },
+    pos: {
+      x: randomIntBetween(-ROAD_SPRITE_SPAWN_X, ROAD_SPRITE_SPAWN_X),
+      y: 0,
+      z: 0
+    },
     rect: { x: -1, y: -1, width: -1, height: -1 },
     i: floor(skyHeight),
     iCoord: skyHeight,
@@ -276,30 +296,28 @@ const TURNING_SPEED = 4.8;
 const SLOW_MULTIPLIER = 4;
 const normalTime = 70;
 const SIDE_SPRITE_INCREASE = 1.4;
-const SIDE_SPRIDE_SLOW_INCREASE = SIDE_SPRITE_INCREASE / SLOW_MULTIPLIER;
-const jumpTime = normalTime * SLOW_MULTIPLIER;
+const slowTime = normalTime * SLOW_MULTIPLIER;
 let turningSpeed = TURNING_SPEED;
+let spriteIncrease = SIDE_SPRITE_INCREASE;
 let xOffset = 0;
+let graceMultiplier = 1;
 
 function tick(t: number) {
   ctx.globalAlpha = 1.0;
   requestAnimationFrame(tick);
 
-  //const divisor = jumping ? jumpTime : normalTime;
-  const divisor = normalTime;
-  turningSpeed = TURNING_SPEED;
-
-  /*const turningSpeed = jumping
-    ? TURNING_SPEED / SLOW_MULTIPLIER
-    : TURNING_SPEED;*/
-
-  //if (!gameVars.gameOver) gameTime += 10 / divisor;
+  const divisor = inGracePeriod() ? slowTime : normalTime;
   gameTime += 10 / divisor;
+  gameTimeAbsolute += 10 / normalTime;
+  graceMultiplier = inGracePeriod() ? 1 / SLOW_MULTIPLIER : 1;
+
+  turningSpeed = TURNING_SPEED * graceMultiplier;
+  spriteIncrease = SIDE_SPRITE_INCREASE * graceMultiplier;
 
   if (gameVars.started) {
     runGame(t);
   } else {
-    runTitleScreen(t);
+    runTitleScreen();
   }
 
   if (!instructionsFlashedRecently()) {
@@ -309,11 +327,12 @@ function tick(t: number) {
 }
 
 function isButtonPressed() {
-  const touchPressed = pointerState.upAt && (gameTime - pointerState.upAt) < TOUCH_TIME;
-  return inputState.left || inputState.right || inputState.jump || touchPressed; 
+  const touchPressed =
+    pointerState.upAt && gameTime - pointerState.upAt < TOUCH_TIME;
+  return inputState.left || inputState.right || inputState.jump || touchPressed;
 }
 
-function runTitleScreen(t: number) {
+function runTitleScreen() {
   if (isButtonPressed()) gameVars.started = true;
   drawSky();
 
@@ -325,7 +344,6 @@ function runTitleScreen(t: number) {
     drawRoad(i, textureCoord);
   }
 
-  //drawGround(road1);
   drawWhiteHouse();
 
   envelopes.forEach(envelope => {
@@ -339,7 +357,13 @@ function runTitleScreen(t: number) {
 
     const { x, y } = envelope.pos;
     ctx.globalAlpha = 1.0;
-    ctx.drawImage(envelope.image, x, y, COLLECTABLE_DIMENSION, COLLECTABLE_DIMENSION);
+    ctx.drawImage(
+      envelope.image,
+      x,
+      y,
+      COLLECTABLE_DIMENSION,
+      COLLECTABLE_DIMENSION
+    );
   });
 
   drawText(
@@ -386,8 +410,7 @@ function runGame(t: number) {
   } else {
     handlePlayerInput(turningSpeed);
     sideSprites.forEach(sprite => {
-      //const increase = jumping ? SIDE_SPRIDE_SLOW_INCREASE : SIDE_SPRITE_INCREASE;
-      const increase = SIDE_SPRITE_INCREASE;
+      const increase = spriteIncrease;
       sprite.iCoord = clamp(
         sprite.iCoord + increase,
         skyHeight - SPRITE_DIMENSIONS * 1.5,
@@ -405,7 +428,6 @@ function runGame(t: number) {
   //let dx = 0;
   //let ddx = 0;
   //movingSegment.i -= .5;
-
 
   if (!inGracePeriod()) unsetShake();
 
@@ -457,7 +479,7 @@ function runGame(t: number) {
   if (gameVars.funding <= 0) {
     gameOverFundingZero();
     return;
-  };
+  }
 
   if (gameVars.timeLeft <= 0) {
     gameOverTimeZero();
@@ -592,34 +614,16 @@ function gameOver() {
     }, RESTART_TIMEOUT_TIME);
   }
 
-  drawText(
-    canvas,
-    gameOverText, 
-    2 * UI_PADDING,
-    UI_PADDING,
-    FONT_SIZE
-  );
+  drawText(canvas, gameOverText, 2 * UI_PADDING, UI_PADDING, FONT_SIZE);
 
   const ballotText = `YOU GOT ${gameVars.ballots} BALLOTS`;
-  drawText(
-    canvas,
-    ballotText,
-    2 * UI_PADDING,
-    2 * SECOND_ROW_Y,
-    FONT_SIZE
-  );
+  drawText(canvas, ballotText, 2 * UI_PADDING, 2 * SECOND_ROW_Y, FONT_SIZE);
 
   const votingText = "VOTING IS GOOD";
-  drawText(
-    canvas,
-    votingText,
-    2 * UI_PADDING, 
-    4 * SECOND_ROW_Y,
-    FONT_SIZE
-  );
+  drawText(canvas, votingText, 2 * UI_PADDING, 4 * SECOND_ROW_Y, FONT_SIZE);
 
- if (gameVars.readyToRestart) {
-   const tapText = "TAP OR PRESS KEY";
+  if (gameVars.readyToRestart) {
+    const tapText = "TAP OR PRESS KEY";
     drawText(
       canvas,
       tapText,
@@ -627,10 +631,10 @@ function gameOver() {
       UI_PADDING * 40,
       FONT_SIZE,
       "#000",
-      instructionsAlpha,
+      instructionsAlpha
     );
 
-   const playAgainText = "TO PLAY AGAIN";
+    const playAgainText = "TO PLAY AGAIN";
     drawText(
       canvas,
       playAgainText,
@@ -638,24 +642,24 @@ function gameOver() {
       UI_PADDING * 40 + SECOND_ROW_Y,
       FONT_SIZE,
       "#000",
-      instructionsAlpha,
+      instructionsAlpha
     );
- }
+  }
 }
 
 function gameOverFundingZero() {
-  gameOverText =  GAME_OVER_FUNDING_TEXT;
+  gameOverText = GAME_OVER_FUNDING_TEXT;
   gameOver();
 }
 
 function gameOverTimeZero() {
-  gameOverText =  GAME_OVER_TIME_TEXT;
+  gameOverText = GAME_OVER_TIME_TEXT;
   gameOver();
 }
 
 function updateTimeLeft() {
   gameVars.timeLeft = max(gameVars.timeLeft - 1, 0);
-  gameVars.lastTimeDecrementedAt = gameTime;
+  gameVars.lastTimeDecrementedAt = gameTimeAbsolute;
 }
 
 function handlePlayerInput(turningSpeed: number) {
@@ -671,7 +675,7 @@ function handlePlayerInput(turningSpeed: number) {
 
   if (player.pos.y < 0)
     player.vel.y = clamp(
-      player.vel.y + GRAVITY,
+      graceMultiplier * (player.vel.y + GRAVITY),
       MAX_NEGATIVE_VEL,
       MAX_POSITIVE_VEL
     );
@@ -771,7 +775,9 @@ function readyToDecrementTime() {
 }
 
 function inGracePeriod() {
-  return timeSinceLastHit() < HIT_TIME && !gameVars.gameOver;
+  return (
+    !!gameVars.lastHitAt && timeSinceLastHit() < HIT_TIME && !gameVars.gameOver
+  );
 }
 
 function flashedRecently() {
@@ -783,7 +789,7 @@ function instructionsFlashedRecently() {
 }
 
 function timeSinceLastTimeDecrement() {
-  return gameTime - gameVars.lastTimeDecrementedAt;
+  return gameTimeAbsolute - gameVars.lastTimeDecrementedAt;
 }
 
 function timeSinceLastHit() {
@@ -903,7 +909,11 @@ function pad(num: number) {
 }
 
 function resetSideSprite(sprite: SideSprite) {
-  sprite.pos = { x: randomIntBetween(-ROAD_SPRITE_SPAWN_X, ROAD_SPRITE_SPAWN_X), y: 0, z: 0 };
+  sprite.pos = {
+    x: randomIntBetween(-ROAD_SPRITE_SPAWN_X, ROAD_SPRITE_SPAWN_X),
+    y: 0,
+    z: 0
+  };
   sprite.roadPercent = random();
   sprite.lastOnScreenAt = null;
   sprite.alpha = 1;
@@ -1306,7 +1316,7 @@ function cosPalette(
 
 function overlaps(sprite: SideSprite) {
   const scale = min(sprite.i / height, 1);
-  const r2y = sprite.i + scale * sprite.dimensions; 
+  const r2y = sprite.i + scale * sprite.dimensions;
 
   const past = r2y >= playerI;
   if (!past) return;
@@ -1314,7 +1324,7 @@ function overlaps(sprite: SideSprite) {
   const playerOffset = xCenter;
 
   const r1x = playerOffset - BIG_SPRITE_DIMENSIONS / 2;
-  const r2x = spriteOffset(sprite) - scale * sprite.dimensions / 2;
+  const r2x = spriteOffset(sprite) - (scale * sprite.dimensions) / 2;
   const r1w = BIG_SPRITE_DIMENSIONS;
   const r2w = sprite.dimensions * scale;
 
