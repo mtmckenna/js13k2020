@@ -24,18 +24,8 @@ import city2ImageData from "../assets/city2-big.png";
 import city3ImageData from "../assets/city3-big.png";
 import envelopeImageData from "../assets/envelope2.png";
 
-let gameVars: GameVars = {
-  started: false,
-  funding: 100,
-  timeLeft: 90,
-  ballots: 0,
-  lastHitAt: null,
-  lastFlashedAt: null,
-  lastTimeDecrementedAt: null,
-  lastFlashedInstructionsAt: null
-};
 
-const { abs, random, floor, round, min, max, sin, sign } = Math;
+const { random, floor, round, min, max } = Math;
 
 const canvas: HTMLCanvasElement = document.querySelector(
   "#game"
@@ -60,7 +50,7 @@ const MAX_FUNDING_BAR = width - UI_PADDING * 2;
 const HIT_TIME = 7;
 const FLASH_TIME = 1.5;
 const INSTRUCTIONS_FLASH_TIME = 5;
-const FUNDING_HIT_AMOUNT = 5;
+const FUNDING_HIT_AMOUNT = 10;
 const MAILBOX_HIT_AMOUNT = 5;
 const PLAYER_EDGE = width / 2;
 const GAME_UPDATE_TIME = 10;
@@ -70,8 +60,30 @@ const ALPHA_INCREASE_AMOUNT = 0.1;
 const ENVELOPE_DIMENSION = 16;
 const ENVELOPE_TIME = 5;
 const ENVELOPE_DELAY = 100;
+const GAME_OVER_FUNDING_TEXT = "RAN OUT OF FUNDS";
+const GAME_OVER_TIME_TEXT = "IT IS ELECTION DAY";
+const ROAD_SPRITE_SPAWN_X = width / 4;
+const RESTART_TIMEOUT_TIME = 1000;
+const START_TIME = 90;
+const START_FUNDING = 100;
+const TOUCH_TIME = 300;
 
+let gameOverText = "";
 let instructionsAlpha = 1.0;
+let restartTimeout: number = null;
+
+let gameVars: GameVars = {
+  started: false,
+  funding: START_FUNDING,
+  timeLeft: START_TIME,
+  ballots: 0,
+  gameOver: false,
+  readyToRestart: false,
+  lastHitAt: null,
+  lastFlashedAt: null,
+  lastTimeDecrementedAt: null,
+  lastFlashedInstructionsAt: null
+};
 
 const OVLERLAP_MAP = {
   wall: handleWallOverlap,
@@ -185,14 +197,13 @@ const envelopes: Sprite[] = range(MAILBOX_HIT_AMOUNT * 20).map(_ => {
   };
 });
 
-const rightMailboxes: SideSprite[] = range(2).map(n => {
-  const iCoord = n + skyHeight + ((n * 40) % groundHeight);
+const rightMailboxes: SideSprite[] = range(2).map(() => {
   return {
     image: rightMailboxImage,
-    pos: { x: randomIntBetween(-80, 80), y: 0, z: 0 },
+    pos: { x: randomIntBetween(-ROAD_SPRITE_SPAWN_X, ROAD_SPRITE_SPAWN_X), y: 0, z: 0 },
     rect: { x: -1, y: -1, width: -1, height: -1 },
-    i: floor(iCoord),
-    iCoord: iCoord,
+    i: floor(skyHeight),
+    iCoord: skyHeight,
     alpha: 1,
     name: "mailbox",
     percentChanceOfSpawning: 0.02,
@@ -204,14 +215,13 @@ const rightMailboxes: SideSprite[] = range(2).map(n => {
   };
 });
 
-const golds: SideSprite[] = range(1).map(n => {
-  const iCoord = n + skyHeight + ((n * 40) % groundHeight);
+const golds: SideSprite[] = range(1).map(() => {
   return {
     image: goldImage,
-    pos: { x: randomIntBetween(-80, 80), y: 0, z: 0 },
+    pos: { x: randomIntBetween(-ROAD_SPRITE_SPAWN_X, ROAD_SPRITE_SPAWN_X), y: 0, z: 0 },
     rect: { x: -1, y: -1, width: -1, height: -1 },
-    i: floor(iCoord),
-    iCoord: iCoord,
+    i: floor(skyHeight),
+    iCoord: skyHeight,
     alpha: 1,
     name: "gold",
     percentChanceOfSpawning: 0.01,
@@ -223,14 +233,13 @@ const golds: SideSprite[] = range(1).map(n => {
   };
 });
 
-const walls: SideSprite[] = range(2).map(n => {
-  const iCoord = n + skyHeight + ((n * 40) % groundHeight);
+const walls: SideSprite[] = range(2).map(() => {
   return {
     image: wallImage,
-    pos: { x: randomIntBetween(-80, 80), y: 0, z: 0 },
+    pos: { x: randomIntBetween(-ROAD_SPRITE_SPAWN_X, ROAD_SPRITE_SPAWN_X), y: 0, z: 0 },
     rect: { x: -1, y: -1, width: -1, height: -1 },
-    i: floor(iCoord),
-    iCoord: iCoord,
+    i: floor(skyHeight),
+    iCoord: skyHeight,
     alpha: 1,
     name: "wall",
     percentChanceOfSpawning: 0.05,
@@ -246,7 +255,7 @@ const sideSprites: SideSprite[] = [];
 
 const MAX_TEX = 2;
 const TEX_DEN = MAX_TEX * 10;
-const TURNING_SPEED = 2.8;
+const TURNING_SPEED = 4.8;
 
 const SLOW_MULTIPLIER = 4;
 const normalTime = 50;
@@ -268,6 +277,7 @@ function tick(t: number) {
     ? TURNING_SPEED / SLOW_MULTIPLIER
     : TURNING_SPEED;*/
 
+  //if (!gameVars.gameOver) gameTime += 10 / divisor;
   gameTime += 10 / divisor;
 
   if (gameVars.started) {
@@ -275,10 +285,16 @@ function tick(t: number) {
   } else {
     runTitleScreen(t);
   }
+
+  if (!instructionsFlashedRecently()) {
+    gameVars.lastFlashedInstructionsAt = gameTime;
+    instructionsAlpha = instructionsAlpha === 1.0 ? 0.0 : 1.0;
+  }
 }
 
 function isButtonPressed() {
-  return inputState.left || inputState.right || inputState.jump;
+  const touchPressed = pointerState.upAt && (gameTime - pointerState.upAt) < TOUCH_TIME;
+  return inputState.left || inputState.right || inputState.jump || touchPressed; 
 }
 
 function runTitleScreen(t: number) {
@@ -324,6 +340,7 @@ function runTitleScreen(t: number) {
     SECOND_ROW_Y,
     FONT_SIZE
   );
+
   drawText(
     canvas,
     "TAP OR PRESS KEY",
@@ -342,19 +359,27 @@ function runTitleScreen(t: number) {
     "#000",
     instructionsAlpha
   );
-
-  if (!instructionsFlashedRecently()) {
-    gameVars.lastFlashedInstructionsAt = gameTime;
-    instructionsAlpha = instructionsAlpha === 1.0 ? 0.0 : 1.0;
-  }
 }
 
 function runGame(t: number) {
   if (readyToDecrementTime()) updateTimeLeft();
-
   realTime = t;
 
-  handlePlayerInput(turningSpeed);
+  if (gameVars.gameOver) {
+    if (gameVars.readyToRestart && isButtonPressed()) restartGame();
+  } else {
+    handlePlayerInput(turningSpeed);
+    sideSprites.forEach(sprite => {
+      //const increase = jumping ? SIDE_SPRIDE_SLOW_INCREASE : SIDE_SPRITE_INCREASE;
+      const increase = SIDE_SPRITE_INCREASE;
+      sprite.iCoord = clamp(
+        sprite.iCoord + increase,
+        skyHeight - SPRITE_DIMENSIONS * 1.5,
+        height - 1
+      );
+      sprite.i = round(sprite.iCoord);
+    });
+  }
 
   drawSky();
   drawGround(road1);
@@ -365,20 +390,8 @@ function runGame(t: number) {
   //let ddx = 0;
   //movingSegment.i -= .5;
 
-  sideSprites.forEach(sprite => {
-    //const increase = jumping ? SIDE_SPRIDE_SLOW_INCREASE : SIDE_SPRITE_INCREASE;
-    const increase = SIDE_SPRITE_INCREASE;
-    sprite.iCoord = clamp(
-      sprite.iCoord + increase,
-      skyHeight - SPRITE_DIMENSIONS * 1.5,
-      height - 1
-    );
-    sprite.i = round(sprite.iCoord);
-  });
 
-  if (!inGracePeriod()) {
-    unsetShake();
-  }
+  if (!inGracePeriod()) unsetShake();
 
   for (let i = zMap.length - 1; i > skyHeight; i--) {
     textureCoord += MAX_TEX / TEX_DEN;
@@ -420,15 +433,25 @@ function runGame(t: number) {
   }
 
   drawRoadSprites();
-  drawUi();
+  if (!gameVars.gameOver) drawUi();
   drawEnvelopes();
   drawTruck();
+
+  if (gameVars.funding <= 0) {
+    gameOverFundingZero();
+    return;
+  };
+
+  if (gameVars.timeLeft <= 0) {
+    gameOverTimeZero();
+    return;
+  }
 }
 
 function drawRoadSprites() {
   sideSprites.forEach(sprite => {
     if (sprite.i === -1) return;
-    if (!sprite.active) {
+    if (!sprite.active && !gameVars.gameOver) {
       if (!spriteReadyToBeOnScreen(sprite)) return;
       if (!isLucky(sprite.percentChanceOfSpawning)) return;
       activateSprite(sprite);
@@ -436,7 +459,7 @@ function drawRoadSprites() {
 
     if (sprite.alpha < 1) sprite.alpha += ALPHA_INCREASE_AMOUNT;
 
-    if (overlaps(sprite)) handleOverlap(sprite);
+    if (overlaps(sprite) && !gameVars.gameOver) handleOverlap(sprite);
 
     drawImage(
       sprite.image,
@@ -519,6 +542,100 @@ function spriteOffset(sprite: SideSprite) {
   );
 }
 
+function restartGame() {
+  gameVars.gameOver = false;
+  gameVars = {
+    started: true,
+    funding: START_FUNDING,
+    timeLeft: START_TIME,
+    ballots: 0,
+    gameOver: false,
+    readyToRestart: false,
+    lastHitAt: null,
+    lastFlashedAt: null,
+    lastTimeDecrementedAt: null,
+    lastFlashedInstructionsAt: null
+  };
+
+  restartTimeout = null;
+  walls.forEach(s => resetSideSprite(s));
+  golds.forEach(s => resetSideSprite(s));
+  rightMailboxes.forEach(s => resetSideSprite(s));
+}
+
+function gameOver() {
+  gameVars.gameOver = true;
+  player.alpha = 1;
+  unsetShake();
+  const width = 5;
+
+  if (!restartTimeout) {
+    restartTimeout = window.setTimeout(() => {
+      gameVars.readyToRestart = true;
+    }, RESTART_TIMEOUT_TIME);
+  }
+
+  drawText(
+    canvas,
+    gameOverText, 
+    2 * UI_PADDING,
+    UI_PADDING,
+    FONT_SIZE
+  );
+
+  const ballotText = `YOU GOT ${gameVars.ballots} BALLOTS`;
+  drawText(
+    canvas,
+    ballotText,
+    2 * UI_PADDING,
+    2 * SECOND_ROW_Y,
+    FONT_SIZE
+  );
+
+  const votingText = "VOTING IS GOOD";
+  drawText(
+    canvas,
+    votingText,
+    2 * UI_PADDING, 
+    4 * SECOND_ROW_Y,
+    FONT_SIZE
+  );
+
+ if (gameVars.readyToRestart) {
+   const tapText = "TAP OR PRESS KEY";
+    drawText(
+      canvas,
+      tapText,
+      8 * UI_PADDING,
+      UI_PADDING * 40,
+      FONT_SIZE,
+      "#000",
+      instructionsAlpha,
+    );
+
+   const playAgainText = "TO PLAY AGAIN";
+    drawText(
+      canvas,
+      playAgainText,
+      12 * UI_PADDING,
+      UI_PADDING * 40 + SECOND_ROW_Y,
+      FONT_SIZE,
+      "#000",
+      instructionsAlpha,
+    );
+ }
+}
+
+function gameOverFundingZero() {
+  gameOverText =  GAME_OVER_FUNDING_TEXT;
+  gameOver();
+}
+
+function gameOverTimeZero() {
+  gameOverText =  GAME_OVER_TIME_TEXT;
+  gameOver();
+}
+
 function updateTimeLeft() {
   gameVars.timeLeft = max(gameVars.timeLeft - 1, 0);
   gameVars.lastTimeDecrementedAt = gameTime;
@@ -582,8 +699,8 @@ function handleMailboxOverlap(sprite: SideSprite) {
     setTimeout(() => {
       envelope.active = true;
       envelope.activatedAt = gameTime;
-      //envelope.pos.y = sprite.i;
-      //envelope.pos.x = spriteOffset(sprite);
+      envelope.pos.y = sprite.i;
+      envelope.pos.x = spriteOffset(sprite);
       envelope.pos.y = playerI;
       envelope.pos.x = spriteOffset(sprite);
     }, ENVELOPE_DELAY * i);
@@ -625,7 +742,7 @@ function readyToDecrementTime() {
 }
 
 function inGracePeriod() {
-  return timeSinceLastHit() < HIT_TIME;
+  return timeSinceLastHit() < HIT_TIME && !gameVars.gameOver;
 }
 
 function flashedRecently() {
@@ -756,6 +873,16 @@ function pad(num: number) {
   return `000${num}`.slice(-3);
 }
 
+function resetSideSprite(sprite: SideSprite) {
+  sprite.pos = { x: randomIntBetween(-ROAD_SPRITE_SPAWN_X, ROAD_SPRITE_SPAWN_X), y: 0, z: 0 };
+  sprite.roadPercent = random();
+  sprite.lastOnScreenAt = null;
+  sprite.alpha = 1;
+  sprite.i = floor(skyHeight);
+  sprite.iCoord = skyHeight;
+  sprite.active = false;
+}
+
 function drawFundingMeter() {
   ctx.fillStyle =
     gameVars.funding < 20 ? BAD_FUNDING_COLOR : GOOD_FUNDING_COLOR;
@@ -880,6 +1007,7 @@ const inputState: InputState = {
 const pointerState: PointerState = {
   down: false,
   downAt: null,
+  upAt: null,
   playerX: null,
   x: null,
   y: null
@@ -922,15 +1050,20 @@ window.addEventListener("keyup", (e: KeyboardEvent) => {
 window.addEventListener("touchstart", (e: TouchEvent) => {
   pointerState.down = true;
   pointerState.downAt = realTime;
+  pointerState.upAt = null;
   const xPercentage = e.touches[0].clientX / window.innerWidth;
   const x = width * xPercentage;
   pointerState.x = x;
   pointerState.playerX = player.pos.x;
 });
 
-window.addEventListener("touchend", (e: TouchEvent) => {
+window.addEventListener("touchend", () => {
   pointerState.down = false;
-  if (realTime - pointerState.downAt < 500) jump();
+  if (realTime - pointerState.downAt < TOUCH_TIME) {
+    jump();
+    pointerState.upAt = gameTime;
+    logBox.innerText += `HI ${gameTime}\n`;
+  }
   pointerState.downAt = null;
 });
 
@@ -1031,6 +1164,7 @@ interface Rect {
 interface PointerState {
   down: boolean;
   downAt: number;
+  upAt: number;
   playerX: number;
   x: number;
   y: number;
@@ -1038,6 +1172,8 @@ interface PointerState {
 
 interface GameVars {
   started: boolean;
+  gameOver: boolean;
+  readyToRestart: boolean;
   ballots: number;
   funding: number;
   timeLeft: number;
@@ -1180,8 +1316,10 @@ function unsetShake() {
 }
 
 // TODO:
-// do better with garbage collection
 // parrallax
+// slow down car when hitting wall
+// handle time out
+// handle funding out
 // fade out audio
 // brick walls
 // mailboxes two sides
@@ -1194,3 +1332,4 @@ function unsetShake() {
 // points
 // wheels moving
 // stars on top/bottom
+// icon
