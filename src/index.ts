@@ -50,11 +50,16 @@ const ROAD_WIDTH_PERCENT = 1.1;
 const ZERO_POS = { x: 0, y: 0, z: 0 };
 const UI_PADDING = 4;
 const FONT_SIZE = 20;
+const WALL_PARTICLES = 25;
+const WALL_DIMENSIONS = 4;
+const WALL_PARTICLE_Y_VEL = -3;
+const WALL_PARTICLE_X_VEL = 1;
+const WALL_PARTICLE_DELAY = 10;
 const SECOND_ROW_Y = UI_PADDING * 2 + FONT_SIZE;
 const MAX_FUNDING_BAR = width - UI_PADDING * 2;
 const HIT_TIME = 1.5;
 const FLASH_TIME = 0.25;
-const ANIMATION_TIME = .25;
+const ANIMATION_TIME = 0.25;
 const INSTRUCTIONS_FLASH_TIME = 5;
 const FUNDING_HIT_AMOUNT = 25;
 const MAILBOX_HIT_AMOUNT = 5;
@@ -229,6 +234,28 @@ const golds2: Sprite[] = range(GOLD_HIT_AMOUNT * 20).map(_ => {
     animatedAt: 0,
     frame: 0,
     dimensions: SPRITE_DIMENSIONS
+  };
+});
+
+const wallParts: Sprite[] = range(WALL_PARTICLES * 10).map(() => {
+  return {
+    image: null,
+    pos: {
+      x: 0,
+      y: 0,
+      z: 0
+    },
+    vel: {
+      x: randomFloatBetween(-WALL_PARTICLE_X_VEL, WALL_PARTICLE_X_VEL),
+      y: WALL_PARTICLE_Y_VEL,
+      z: 0
+    },
+    alpha: 1,
+    active: false,
+    activatedAt: 0,
+    animatedAt: 0,
+    frame: 0,
+    dimensions: WALL_DIMENSIONS
   };
 });
 
@@ -437,7 +464,6 @@ function runGame(t: number) {
   drawGround(road1);
   drawCity();
   let textureCoord = 0;
-  let spriteIndex = 0;
   //let dx = 0;
   //let ddx = 0;
   //movingSegment.i -= .5;
@@ -485,6 +511,7 @@ function runGame(t: number) {
 
   drawRoadSprites();
   if (!gameVars.gameOver) drawUi();
+  drawWallParticles();
   drawEnvelopes();
   drawGolds();
   drawTruck();
@@ -530,7 +557,6 @@ function drawRoadSprites() {
 function drawRoad(i: number, textureCoord: number) {
   const zWorld = zMap[i];
   const index = (textureCoord + gameTime + zWorld) % MAX_TEX;
-  //const index = (((textureCoord + gameTime + zWorld) % MAX_TEX) + MAX_TEX) % MAX_TEX;
 
   const whiteLineWidth = whiteLineWidths[i];
   const roadWidth = roadWidths[i];
@@ -538,7 +564,6 @@ function drawRoad(i: number, textureCoord: number) {
   const totalPercent = i / height;
 
   const currentRoadWidth = MAX_ROAD_WIDTH * totalPercent;
-  //console.log(currentRoadWidth, roadWidths[i].x2 - roadWidths[i].x1);
   ctx.strokeStyle = index < MAX_TEX / 2 ? grass1 : grass2;
   ctx.beginPath();
   ctx.moveTo(round(0), i);
@@ -554,7 +579,6 @@ function drawRoad(i: number, textureCoord: number) {
   ctx.closePath();
   ctx.stroke();
 
-  // Draw road
   ctx.strokeStyle = road2;
   ctx.beginPath();
   ctx.moveTo(round(roadWidth.x1 - xOffset + xCenter), i);
@@ -619,7 +643,6 @@ function gameOver() {
   gameVars.gameOver = true;
   player.alpha = 1;
   unsetShake();
-  const width = 5;
 
   if (!restartTimeout) {
     restartTimeout = window.setTimeout(() => {
@@ -715,11 +738,23 @@ function handleOverlap(sprite: SideSprite) {
   deactivateSprite(sprite);
 }
 
-function handleWallOverlap() {
+function handleWallOverlap(sprite: SideSprite) {
   if (inGracePeriod()) return;
   gameVars.lastHitAt = gameTime;
   gameVars.funding = max(gameVars.funding - FUNDING_HIT_AMOUNT, 0);
   setShake();
+  const inactive = wallParts.filter(part => part.active !== true);
+  const toActivate = wallParts.slice(
+    Math.max(inactive.length - WALL_PARTICLES, 0)
+  );
+  toActivate.forEach((part, i) => {
+    setTimeout(() => {
+      part.active = true;
+      part.activatedAt = gameTime;
+      part.pos.y = playerI;
+      part.pos.x = spriteOffset(sprite);
+    }, WALL_PARTICLE_DELAY * i);
+  });
 }
 
 function handleGoldOverlap(sprite: SideSprite) {
@@ -839,7 +874,7 @@ function drawTruck() {
   const { frame } = player;
   let nextFrame = frame;
   if (readyToAnimate(player)) {
-    nextFrame = ((frame + 1) % 2);
+    nextFrame = (frame + 1) % 2;
     player.animatedAt = gameTime;
   }
 
@@ -963,22 +998,47 @@ function drawFundingMeter() {
   drawText(canvas, "FUNDING", UI_PADDING, SECOND_ROW_Y, FONT_SIZE);
 }
 
-function getEnvelopePosition(envelope: Sprite): { x: number; y: number } {
+function getWallParticlePosition(particle: Sprite): { x: number; y: number } {
+  particle.pos.x += particle.vel.x;
+  particle.pos.y += particle.vel.y;
+  particle.vel.y += GRAVITY;
+  const { x, y } = particle.pos;
+  return { x, y };
+}
+
+function getCollectablePosition(envelope: Sprite, yEndPosition = 0): { x: number; y: number } {
   const { x, y } = envelope.pos;
   const { activatedAt } = envelope;
   const t = clamp((gameTime - activatedAt) / ENVELOPE_TIME, 0, 1);
   const x2 = lerp(x, 0, t);
-  const y2 = lerp(y, 0, t);
+  const y2 = lerp(y, yEndPosition, t);
   return { x: x2, y: y2 };
+}
+
+function drawWallParticles() {
+  wallParts
+    .filter(sprite => sprite.active)
+    .forEach(part => {
+      const { x, y } = getWallParticlePosition(part);
+
+      if (y >= height) {
+        part.active = false;
+        part.vel.y = WALL_PARTICLE_Y_VEL;
+        return;
+      }
+
+      ctx.fillStyle = BAD_FUNDING_COLOR;
+      ctx.fillRect(x, y, part.dimensions * 2, part.dimensions);
+    });
 }
 
 function drawGolds() {
   golds2
     .filter(sprite => sprite.active)
     .forEach(gold => {
-      const { x, y } = getEnvelopePosition(gold);
+      const { x, y } = getCollectablePosition(gold, SECOND_ROW_Y);
 
-      if (x === 0 && y === 0) {
+      if (x === 0 && y === SECOND_ROW_Y) {
         gold.active = false;
         return;
       }
@@ -997,7 +1057,7 @@ function drawEnvelopes() {
   envelopes
     .filter(sprite => sprite.active)
     .forEach(envelope => {
-      const { x, y } = getEnvelopePosition(envelope);
+      const { x, y } = getCollectablePosition(envelope);
 
       if (x === 0 && y === 0) {
         envelope.active = false;
@@ -1079,7 +1139,7 @@ function resize() {
   const rect = canvasWrapper.getBoundingClientRect();
 
   const { width: canvasWidth, height: canvasHeight } = rect;
-  const canvasAspectRatio =  canvasWidth / canvasHeight;
+  const canvasAspectRatio = canvasWidth / canvasHeight;
 
   if (canvasAspectRatio > aspectRatio) {
     canvas.style.height = `${canvasHeight}px`;
@@ -1177,7 +1237,7 @@ window.addEventListener("touchmove", (e: TouchEvent) => {
   const xPercentage = e.touches[0].clientX / window.innerWidth;
   const x = width * xPercentage;
 
-  const diff = (x - pointerState.x);
+  const diff = x - pointerState.x;
 
   if (gameVars.gameOver) return;
   player.pos.x = pointerState.playerX + diff;
@@ -1425,11 +1485,17 @@ function unsetShake() {
 // TODO:
 // parrallax
 // fade out audio
-// brick walls
 // mailboxes two sides
 // lights on truck
 // particles
 // clouds
 // sounds
 // points
-// stars on top/bottom
+// what to do with fun color
+// curves
+// hills
+// add flash of color/text when pick up mail
+// add flash of color/text when pick up gold
+// add css bounce when land
+// make it clearer when running out of time
+// rename sidesprite to roadsprite
