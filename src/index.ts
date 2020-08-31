@@ -80,6 +80,8 @@ const START_TIME = 90;
 const START_FUNDING = 100;
 const TOUCH_TIME = 300;
 const SHADOW_COLOR = "#EEE";
+const MAILBOX_CHANCE_SPAWN = 0.02;
+const MAILBOX_TIME_OFFSCREEN = 1;
 
 let gameOverText = "";
 let instructionsAlpha = 1.0;
@@ -109,6 +111,9 @@ carImage.src = carImageData;
 
 const rightMailboxImage = new Image();
 rightMailboxImage.src = mailboxImageData;
+
+const leftMailboxImage = new Image();
+leftMailboxImage.src = mailboxImageData;
 
 const goldImage = new Image();
 goldImage.src = goldImageData;
@@ -259,7 +264,29 @@ const wallParts: Sprite[] = range(WALL_PARTICLES * 10).map(() => {
   };
 });
 
-const rightMailboxes: SideSprite[] = range(2).map(() => {
+const leftMailboxes: SideSprite[] = range(1).map(() => {
+  return {
+    image: leftMailboxImage,
+    pos: {
+      x: randomIntBetween(-ROAD_SPRITE_SPAWN_X, ROAD_SPRITE_SPAWN_X),
+      y: 0,
+      z: 0
+    },
+    rect: { x: -1, y: -1, width: -1, height: -1 },
+    i: floor(skyHeight),
+    iCoord: skyHeight,
+    alpha: 1,
+    name: "mailbox",
+    percentChanceOfSpawning: MAILBOX_CHANCE_SPAWN,
+    minTimeOffScreen: MAILBOX_TIME_OFFSCREEN,
+    lastOnScreenAt: null,
+    roadPercent: random(),
+    active: false,
+    dimensions: BIG_SPRITE_DIMENSIONS
+  };
+});
+
+const rightMailboxes: SideSprite[] = range(1).map(() => {
   return {
     image: rightMailboxImage,
     pos: {
@@ -272,8 +299,8 @@ const rightMailboxes: SideSprite[] = range(2).map(() => {
     iCoord: skyHeight,
     alpha: 1,
     name: "mailbox",
-    percentChanceOfSpawning: 0.02,
-    minTimeOffScreen: 1,
+    percentChanceOfSpawning: MAILBOX_CHANCE_SPAWN,
+    minTimeOffScreen: MAILBOX_TIME_OFFSCREEN,
     lastOnScreenAt: null,
     roadPercent: random(),
     active: false,
@@ -637,6 +664,7 @@ function restartGame() {
   walls.forEach(s => resetSideSprite(s));
   golds.forEach(s => resetSideSprite(s));
   rightMailboxes.forEach(s => resetSideSprite(s));
+  leftMailboxes.forEach(s => resetSideSprite(s));
 }
 
 function gameOver() {
@@ -1116,7 +1144,7 @@ async function load() {
   image.src = imageData;
   addFavicon();
   rightMailboxes.forEach(mb => (mb.image = image));
-  sideSprites.push(...rightMailboxes, ...golds, ...walls);
+  sideSprites.push(...rightMailboxes, ...leftMailboxes, ...golds, ...walls);
 }
 
 function clamp(num: number, min: number, max: number): number {
@@ -1485,9 +1513,7 @@ function unsetShake() {
 // TODO:
 // parrallax
 // fade out audio
-// mailboxes two sides
 // lights on truck
-// particles
 // clouds
 // sounds
 // points
