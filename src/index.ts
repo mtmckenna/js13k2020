@@ -52,7 +52,7 @@ const UI_PADDING = 4;
 const FONT_SIZE = 20;
 const SECOND_ROW_Y = UI_PADDING * 2 + FONT_SIZE;
 const MAX_FUNDING_BAR = width - UI_PADDING * 2;
-const HIT_TIME = 1;
+const HIT_TIME = 1.5;
 const FLASH_TIME = 0.25;
 const ANIMATION_TIME = .25;
 const INSTRUCTIONS_FLASH_TIME = 5;
@@ -1181,6 +1181,8 @@ window.addEventListener("touchmove", (e: TouchEvent) => {
   const x = width * xPercentage;
 
   const diff = (x - pointerState.x);
+
+  if (gameVars.gameOver) return;
   player.pos.x = pointerState.playerX + diff;
 });
 
