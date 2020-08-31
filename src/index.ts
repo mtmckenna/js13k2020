@@ -5,11 +5,13 @@
 import { drawText } from "./font";
 
 import {
-  startGroundEngine,
-  stopGroundEngine,
-  startAirEngine,
-  stopAirEngine,
-  playTheThing
+  startEngines,
+  playHitWall,
+  playHitMailbox,
+  playHitGold,
+  playAirEngine,
+  playGroundEngine,
+  quietAllEngines
 } from "./audio";
 
 import carImageData from "../assets/mailtruck-sheet-big.png";
@@ -380,6 +382,7 @@ function tick(t: number) {
   spriteIncrease = SIDE_SPRITE_INCREASE * graceMultiplier;
 
   if (gameVars.started) {
+    startEngines();
     runGame(t);
   } else {
     runTitleScreen();
@@ -671,6 +674,7 @@ function gameOver() {
   gameVars.gameOver = true;
   player.alpha = 1;
   unsetShake();
+  quietAllEngines();
 
   if (!restartTimeout) {
     restartTimeout = window.setTimeout(() => {
@@ -749,8 +753,7 @@ function handlePlayerInput(turningSpeed: number) {
   if (player.pos.y > 0) {
     player.vel.y = 0;
     player.pos.y = 0;
-    stopAirEngine();
-    startGroundEngine();
+    playGroundEngine();
   }
 
   player.pos.y += clamp(player.vel.y, MAX_NEGATIVE_VEL, MAX_POSITIVE_VEL);
@@ -762,7 +765,6 @@ function handlePlayerInput(turningSpeed: number) {
 
 function handleOverlap(sprite: SideSprite) {
   if (OVLERLAP_MAP[sprite.name]) OVLERLAP_MAP[sprite.name](sprite);
-  playTheThing();
   deactivateSprite(sprite);
 }
 
@@ -771,6 +773,7 @@ function handleWallOverlap(sprite: SideSprite) {
   gameVars.lastHitAt = gameTime;
   gameVars.funding = max(gameVars.funding - FUNDING_HIT_AMOUNT, 0);
   setShake();
+  playHitWall();
   const inactive = wallParts.filter(part => part.active !== true);
   const toActivate = wallParts.slice(
     Math.max(inactive.length - WALL_PARTICLES, 0)
@@ -787,6 +790,7 @@ function handleWallOverlap(sprite: SideSprite) {
 
 function handleGoldOverlap(sprite: SideSprite) {
   gameVars.funding = min(gameVars.funding + GOLD_HIT_AMOUNT, START_FUNDING);
+  playHitGold();
   const inactive = golds2.filter(gold => gold.active !== true);
   const toActivate = golds2.slice(
     Math.max(inactive.length - GOLD_HIT_AMOUNT, 0)
@@ -802,6 +806,7 @@ function handleGoldOverlap(sprite: SideSprite) {
 }
 
 function handleMailboxOverlap(sprite: SideSprite) {
+  playHitMailbox();
   const inactive = envelopes.filter(envelope => envelope.active !== true);
   const toActivate = inactive.slice(
     Math.max(inactive.length - MAILBOX_HIT_AMOUNT, 0)
@@ -1154,8 +1159,7 @@ function clamp(num: number, min: number, max: number): number {
 function jump() {
   if (player.pos.y !== 0) return;
   player.vel.y = JUMP_VELOCITY;
-  stopGroundEngine();
-  startAirEngine();
+  playAirEngine();
 }
 
 function updatePlayerPos(x: number, y: number) {
@@ -1525,3 +1529,7 @@ function unsetShake() {
 // add css bounce when land
 // make it clearer when running out of time
 // rename sidesprite to roadsprite
+// dust when you land
+// time running out sound,
+// time running out visual indicator,
+// more intense funding running out visual indicator
