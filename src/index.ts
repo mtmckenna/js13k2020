@@ -1050,7 +1050,6 @@ function drawImage(
 }
 
 async function load() {
-  console.log("loading");
   const imageData = await flipImage(mailboxImageData);
   requestAnimationFrame(tick);
   const image = new Image();
@@ -1058,8 +1057,6 @@ async function load() {
   addFavicon();
   rightMailboxes.forEach(mb => (mb.image = image));
   sideSprites.push(...rightMailboxes, ...golds, ...walls);
-  console.log(sideSprites);
-  console.log("loaded");
 }
 
 function clamp(num: number, min: number, max: number): number {
