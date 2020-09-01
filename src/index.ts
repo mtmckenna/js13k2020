@@ -67,6 +67,7 @@ const PLAYER_EDGE = width / 2;
 const GAME_UPDATE_TIME = 5;
 const MAX_ROAD_WIDTH = width * ROAD_WIDTH_PERCENT;
 const SHAKE_CLASS_NAME = "shake";
+const LAND_CLASS_NAME = "land";
 const ALPHA_INCREASE_AMOUNT = 0.075;
 const COLLECTABLE_DIMENSION = 16;
 const ENVELOPE_TIME = 5;
@@ -754,6 +755,8 @@ function handlePlayerInput(turningSpeed: number) {
     player.vel.y = 0;
     player.pos.y = 0;
     playGroundEngine();
+    unsetLand();
+    window.setTimeout(() => setLand(), 0);
   }
 
   player.pos.y += clamp(player.vel.y, MAX_NEGATIVE_VEL, MAX_POSITIVE_VEL);
@@ -1157,6 +1160,7 @@ function clamp(num: number, min: number, max: number): number {
 }
 
 function jump() {
+  unsetLand();
   if (player.pos.y !== 0) return;
   player.vel.y = JUMP_VELOCITY;
   playAirEngine();
@@ -1515,13 +1519,21 @@ function unsetShake() {
   canvas.classList.remove(SHAKE_CLASS_NAME);
 }
 
+function setLand() {
+  if (canvas.classList.contains(LAND_CLASS_NAME)) return;
+  canvas.classList.add(LAND_CLASS_NAME);
+}
+
+function unsetLand() {
+  if (!canvas.classList.contains(LAND_CLASS_NAME)) return;
+  canvas.classList.remove(LAND_CLASS_NAME);
+}
+
 // TODO:
 // parrallax
-// fade out audio
 // lights on truck
 // clouds
-// sounds
-// points
+// game over sounds
 // what to do with fun color
 // curves
 // hills
