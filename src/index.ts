@@ -1,10 +1,7 @@
-//window.onerror = function(message, source, lineno, colno, error) {
-//logBox.innerText += `${message}\n`;
-//}
-
 import { drawText } from "./font";
 
 import {
+  engineAlreadyStarted,
   startEngines,
   playHitWall,
   playHitMailbox,
@@ -266,7 +263,7 @@ const wallParts: Sprite[] = range(WALL_PARTICLES * 10).map(() => {
   };
 });
 
-const leftMailboxes: SideSprite[] = range(1).map(() => {
+const leftMailboxes: RoadSprite[] = range(1).map(() => {
   return {
     image: leftMailboxImage,
     pos: {
@@ -288,7 +285,7 @@ const leftMailboxes: SideSprite[] = range(1).map(() => {
   };
 });
 
-const rightMailboxes: SideSprite[] = range(1).map(() => {
+const rightMailboxes: RoadSprite[] = range(1).map(() => {
   return {
     image: rightMailboxImage,
     pos: {
@@ -310,7 +307,7 @@ const rightMailboxes: SideSprite[] = range(1).map(() => {
   };
 });
 
-const golds: SideSprite[] = range(1).map(() => {
+const golds: RoadSprite[] = range(1).map(() => {
   return {
     image: goldImage,
     pos: {
@@ -332,7 +329,7 @@ const golds: SideSprite[] = range(1).map(() => {
   };
 });
 
-const walls: SideSprite[] = range(2).map(() => {
+const walls: RoadSprite[] = range(2).map(() => {
   return {
     image: wallImage,
     pos: {
@@ -354,7 +351,7 @@ const walls: SideSprite[] = range(2).map(() => {
   };
 });
 
-const sideSprites: SideSprite[] = [];
+const roadSprites: RoadSprite[] = [];
 
 const MAX_TEX = 2;
 const TEX_DEN = MAX_TEX * 10;
@@ -382,7 +379,6 @@ function tick(t: number) {
   spriteIncrease = SIDE_SPRITE_INCREASE * graceMultiplier;
 
   if (gameVars.started) {
-    startEngines();
     runGame(t);
   } else {
     runTitleScreen();
@@ -401,7 +397,11 @@ function isButtonPressed() {
 }
 
 function runTitleScreen() {
-  if (isButtonPressed()) gameVars.started = true;
+  if (isButtonPressed()) {
+    if (!engineAlreadyStarted()) startEngines();
+    gameVars.started = true;
+  }
+
   drawSky();
 
   xOffset = xCenter;
@@ -479,7 +479,7 @@ function runGame(t: number) {
     if (gameVars.readyToRestart && isButtonPressed()) restartGame();
   } else {
     handlePlayerInput(turningSpeed);
-    sideSprites.forEach(sprite => {
+    roadSprites.forEach(sprite => {
       const increase = spriteIncrease;
       sprite.iCoord = clamp(
         sprite.iCoord + increase,
@@ -558,7 +558,7 @@ function runGame(t: number) {
 }
 
 function drawRoadSprites() {
-  sideSprites.forEach(sprite => {
+  roadSprites.forEach(sprite => {
     if (sprite.i === -1) return;
     if (!sprite.active && !gameVars.gameOver) {
       if (!spriteReadyToBeOnScreen(sprite)) return;
@@ -639,7 +639,7 @@ function drawRoad(i: number, textureCoord: number) {
   textureCoord %= MAX_TEX;
 }
 
-function spriteOffset(sprite: SideSprite) {
+function spriteOffset(sprite: RoadSprite) {
   const roadWidth = roadWidths[sprite.i];
   return (
     roadWidth.x1 +
@@ -664,10 +664,10 @@ function restartGame() {
   };
 
   restartTimeout = null;
-  walls.forEach(s => resetSideSprite(s));
-  golds.forEach(s => resetSideSprite(s));
-  rightMailboxes.forEach(s => resetSideSprite(s));
-  leftMailboxes.forEach(s => resetSideSprite(s));
+  walls.forEach(s => resetRoadSprite(s));
+  golds.forEach(s => resetRoadSprite(s));
+  rightMailboxes.forEach(s => resetRoadSprite(s));
+  leftMailboxes.forEach(s => resetRoadSprite(s));
 }
 
 function gameOver() {
@@ -763,12 +763,12 @@ function handlePlayerInput(turningSpeed: number) {
   updatePlayerPos(player.pos.x, player.pos.y);
 }
 
-function handleOverlap(sprite: SideSprite) {
+function handleOverlap(sprite: RoadSprite) {
   if (OVLERLAP_MAP[sprite.name]) OVLERLAP_MAP[sprite.name](sprite);
   deactivateSprite(sprite);
 }
 
-function handleWallOverlap(sprite: SideSprite) {
+function handleWallOverlap(sprite: RoadSprite) {
   if (inGracePeriod()) return;
   gameVars.lastHitAt = gameTime;
   gameVars.funding = max(gameVars.funding - FUNDING_HIT_AMOUNT, 0);
@@ -788,7 +788,7 @@ function handleWallOverlap(sprite: SideSprite) {
   });
 }
 
-function handleGoldOverlap(sprite: SideSprite) {
+function handleGoldOverlap(sprite: RoadSprite) {
   gameVars.funding = min(gameVars.funding + GOLD_HIT_AMOUNT, START_FUNDING);
   playHitGold();
   const inactive = golds2.filter(gold => gold.active !== true);
@@ -805,7 +805,7 @@ function handleGoldOverlap(sprite: SideSprite) {
   });
 }
 
-function handleMailboxOverlap(sprite: SideSprite) {
+function handleMailboxOverlap(sprite: RoadSprite) {
   playHitMailbox();
   const inactive = envelopes.filter(envelope => envelope.active !== true);
   const toActivate = inactive.slice(
@@ -838,12 +838,12 @@ function flashTruck() {
   player.alpha = alpha;
 }
 
-function deactivateSprite(sprite: SideSprite) {
+function deactivateSprite(sprite: RoadSprite) {
   sprite.active = false;
   sprite.lastOnScreenAt = gameTime;
 }
 
-function activateSprite(sprite: SideSprite) {
+function activateSprite(sprite: RoadSprite) {
   sprite.active = true;
   sprite.i = skyHeight - BIG_SPRITE_DIMENSIONS;
   sprite.iCoord = sprite.i;
@@ -893,11 +893,11 @@ function timeSinceLastInstructionFlash() {
   return gameTime - gameVars.lastFlashedInstructionsAt;
 }
 
-function spriteReadyToBeOnScreen(sprite: SideSprite) {
+function spriteReadyToBeOnScreen(sprite: RoadSprite) {
   return timeSinceSpriteOnScreen(sprite) > sprite.minTimeOffScreen;
 }
 
-function timeSinceSpriteOnScreen(sprite: SideSprite) {
+function timeSinceSpriteOnScreen(sprite: RoadSprite) {
   return gameTime - sprite.lastOnScreenAt;
 }
 
@@ -1009,7 +1009,7 @@ function pad(num: number) {
   return `000${num}`.slice(-3);
 }
 
-function resetSideSprite(sprite: SideSprite) {
+function resetRoadSprite(sprite: RoadSprite) {
   sprite.pos = {
     x: randomIntBetween(-ROAD_SPRITE_SPAWN_X, ROAD_SPRITE_SPAWN_X),
     y: 0,
@@ -1149,7 +1149,7 @@ async function load() {
   image.src = imageData;
   addFavicon();
   rightMailboxes.forEach(mb => (mb.image = image));
-  sideSprites.push(...rightMailboxes, ...leftMailboxes, ...golds, ...walls);
+  roadSprites.push(...rightMailboxes, ...leftMailboxes, ...golds, ...walls);
 }
 
 function clamp(num: number, min: number, max: number): number {
@@ -1245,11 +1245,12 @@ window.addEventListener("touchstart", (e: TouchEvent) => {
 
 window.addEventListener("touchend", () => {
   pointerState.down = false;
-  if (realTime - pointerState.downAt < TOUCH_TIME) {
+  if ((realTime - pointerState.downAt) < TOUCH_TIME) {
     jump();
     pointerState.upAt = gameTime;
-    //logBox.innerText += `HI ${gameTime}\n`;
   }
+
+  startEngines();
   pointerState.downAt = null;
 });
 
@@ -1331,7 +1332,7 @@ interface Sprite {
   frame: number;
 }
 
-interface SideSprite {
+interface RoadSprite {
   image: HTMLImageElement;
   pos: Vector;
   rect: Rect;
@@ -1452,7 +1453,7 @@ function cosPalette(
   return apbcos;
 }
 
-function overlaps(sprite: SideSprite) {
+function overlaps(sprite: RoadSprite) {
   const scale = min(sprite.i / height, 1);
   const r2y = sprite.i + scale * sprite.dimensions;
 
@@ -1528,8 +1529,8 @@ function unsetShake() {
 // add flash of color/text when pick up gold
 // add css bounce when land
 // make it clearer when running out of time
-// rename sidesprite to roadsprite
-// dust when you land
+// dust/sparks when you land
 // time running out sound,
 // time running out visual indicator,
 // more intense funding running out visual indicator
+// bug where game starts over on mobile
