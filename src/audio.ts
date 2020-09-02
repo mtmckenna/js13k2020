@@ -1,7 +1,7 @@
 const EPSILON = 0.0001;
 const RAMP_TIME = 0.1;
 const AUDIO_TIME_CONSTANT = .01;
-const MAX_ENGINE = 0.5;
+const MAX_ENGINE = 0.2;
 
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 

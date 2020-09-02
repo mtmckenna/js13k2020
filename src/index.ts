@@ -675,6 +675,7 @@ function spriteOffset(sprite: RoadSprite) {
 }
 
 function restartGame() {
+  playElectionDay();
   gameVars.gameOver = false;
   gameVars = {
     started: true,
