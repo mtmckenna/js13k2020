@@ -22,6 +22,7 @@ import city1ImageData from "../assets/city1-big.png";
 import city2ImageData from "../assets/city2-big.png";
 import city3ImageData from "../assets/city3-big.png";
 import envelopeImageData from "../assets/envelope2.png";
+import cloudsImageData from "../assets/clouds-big.png";
 
 const { random, floor, round, min, max } = Math;
 
@@ -124,6 +125,9 @@ wallImage.src = brickWallImageData;
 const envelopeImage = new Image();
 envelopeImage.src = envelopeImageData;
 
+const cloudsImage = new Image();
+cloudsImage.src = cloudsImageData;
+
 const wh1 = new Image();
 const wh2 = new Image();
 const wh3 = new Image();
@@ -189,8 +193,6 @@ for (let i = 0; i < zMap.length; i++) {
 const horizonI = skyHeight;
 const xCenter = floor(width / 2);
 
-//const logBox: HTMLElement = document.querySelector("#log");
-
 let playerIForGround50 = 50;
 const playerI = playerIForGround50 + horizonI;
 const player: Sprite = {
@@ -220,6 +222,24 @@ const envelopes: Sprite[] = range(MAILBOX_HIT_AMOUNT * 20).map(_ => {
     animatedAt: 0,
     frame: 0,
     dimensions: SPRITE_DIMENSIONS
+  };
+});
+
+const clouds: Sprite[] = range(10).map(_ => {
+  return {
+    image: cloudsImage,
+    pos: {
+      x: randomIntBetween(-width, width + BIG_SPRITE_DIMENSIONS),
+      y: randomIntBetween(0, skyHeight - BIG_SPRITE_DIMENSIONS),
+      z: 0
+    },
+    vel: { x: randomFloatBetween(-.6, -.2), y: 0, z: 0 },
+    alpha: 1,
+    active: true,
+    activatedAt: 0,
+    animatedAt: 0,
+    frame: randomIntBetween(0, 1),
+    dimensions: BIG_SPRITE_DIMENSIONS
   };
 });
 
@@ -493,6 +513,7 @@ function runGame(t: number) {
 
   drawSky();
   drawGround(road1);
+  drawClouds();
   drawCity();
   let textureCoord = 0;
   //let dx = 0;
@@ -1042,9 +1063,9 @@ function getWallParticlePosition(particle: Sprite): { x: number; y: number } {
   return { x, y };
 }
 
-function getCollectablePosition(envelope: Sprite, yEndPosition = 0): { x: number; y: number } {
-  const { x, y } = envelope.pos;
-  const { activatedAt } = envelope;
+function getCollectablePosition(sprite: Sprite, yEndPosition = 0): { x: number; y: number } {
+  const { x, y } = sprite.pos;
+  const { activatedAt } = sprite;
   const t = clamp((gameTime - activatedAt) / ENVELOPE_TIME, 0, 1);
   const x2 = lerp(x, 0, t);
   const y2 = lerp(y, yEndPosition, t);
@@ -1074,7 +1095,7 @@ function drawGolds() {
     .forEach(gold => {
       const { x, y } = getCollectablePosition(gold, SECOND_ROW_Y);
 
-      if (x === 0 && y === SECOND_ROW_Y) {
+      if (y === SECOND_ROW_Y) {
         gold.active = false;
         return;
       }
@@ -1089,13 +1110,40 @@ function drawGolds() {
     });
 }
 
+
+function drawClouds() {
+  clouds
+    .filter(sprite => sprite.active)
+    .forEach(cloud => {
+
+      if (cloud.pos.x < -width) {
+        cloud.pos.x = width + cloud.dimensions * 3;
+        cloud.pos.y = randomIntBetween(0, skyHeight - BIG_SPRITE_DIMENSIONS);
+      } else {
+        cloud.pos.x += cloud.vel.x;
+      }
+
+      ctx.drawImage(
+        cloud.image,
+        0,
+        cloud.frame * cloud.dimensions / 2,
+        cloud.dimensions,
+        cloud.dimensions / 2,
+        cloud.pos.x - player.pos.x,
+        cloud.pos.y,
+        cloud.dimensions,
+        cloud.dimensions / 2
+      );
+    });
+}
+
 function drawEnvelopes() {
   envelopes
     .filter(sprite => sprite.active)
     .forEach(envelope => {
       const { x, y } = getCollectablePosition(envelope);
 
-      if (x === 0 && y === 0) {
+      if (y === 0) {
         envelope.active = false;
         return;
       }
