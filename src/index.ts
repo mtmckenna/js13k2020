@@ -1593,17 +1593,20 @@ function unsetLand() {
 }
 
 // TODO:
-// parrallax
-// lights on truck
-// what to do with fun color
+// increase walls as game carries on
+// add notes about making to election day is the goal
+// add better css bounce when land
+// time running out sound,
+// make it clearer when running out of time
+// time running out visual indicator,
+// more intense funding running out visual indicator
+// dust/sparks when you land
 // curves
 // hills
 // add flash of color/text when pick up mail
 // add flash of color/text when pick up gold
-// add css bounce when land
-// make it clearer when running out of time
-// dust/sparks when you land
-// time running out sound,
-// time running out visual indicator,
-// more intense funding running out visual indicator
+// parrallax
+// lights on truck
+// what to do with fun color
 // bug where game starts over on mobile
+
