@@ -682,6 +682,7 @@ function restartGame() {
     timeLeft: START_TIME,
     ballots: 0,
     gameOver: false,
+    playedGameOverSound: false,
     readyToRestart: false,
     lastHitAt: null,
     lastFlashedAt: null,
