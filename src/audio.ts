@@ -25,6 +25,28 @@ export const playHitMailbox = () =>
 export const playHitGold = () =>
   createSound([250, 250], [0.2, 0.3], "triangle");
 
+const Al = 233.08;
+const Bf = 246.94;
+const C = 261.63;
+const D = 293.66;
+const E = 329.63;
+const F = 349.23;
+const G = 392.00;
+const A = 440.00;
+
+// https://www.youtube.com/watch?v=PjwsAWomTFI
+// https://pages.mtu.edu/~suits/notefreqs.html
+//                      glo ry   glo   ry   ha   le  lu  ja    glo  ry   glo  ry   ha   le   lu  ja    glo ry   glo  ry  ha  le  lu   ja    his  tr  is    ma   chn  on
+// prettier-ignore
+const battleNotes   = [ C,  Bf,  Al,   C,   F,   G,   A,  F,   D,   E,   F,   E,   F,   D,   C,  Al,   C,  Bf,  Al,  C,  F,  G,   A,   F,   F,  G,   G,   F,   E,   F];
+// prettier-ignore
+const notesDuration = [.4,  .1,  .1,  .1,  .1,  .1,  .4, .2,  .2,  .1,  .1,  .1,  .1,  .1,  .4,  .2,  .1,  .1,  .1, .1, .1, .1,  .1,  .1,  .2, .2,  .2,  .2,  .2,  .2];
+export const playElectionDay = () =>
+  createSound(battleNotes, notesDuration, "triangle");
+
+export const playNoFunds = () =>
+  createSound([250, 200, 150, 100], [0.4, 0.4, .4, 2.5], "triangle");
+
 // https://blog.j-labs.pl/2017/02/Creating-game-for-android-using-JavaScript-4-Sounds-Web-Audio-Api
 function createSound(notes: number[], times: number[], type: OscillatorType) {
   const noteGain = audioContext.createGain();

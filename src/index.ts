@@ -8,7 +8,9 @@ import {
   playHitGold,
   playAirEngine,
   playGroundEngine,
-  quietAllEngines
+  quietAllEngines,
+  playElectionDay,
+  playNoFunds
 } from "./audio";
 
 import carImageData from "../assets/mailtruck-sheet-big.png";
@@ -95,6 +97,7 @@ let gameVars: GameVars = {
   ballots: 0,
   gameOver: false,
   readyToRestart: false,
+  playedGameOverSound: false,
   lastHitAt: null,
   lastFlashedAt: null,
   lastTimeDecrementedAt: null,
@@ -420,6 +423,7 @@ function isButtonPressed() {
 function runTitleScreen() {
   if (isButtonPressed()) {
     if (!engineAlreadyStarted()) startEngines();
+    playElectionDay();
     gameVars.started = true;
   }
 
@@ -741,11 +745,19 @@ function gameOver() {
 
 function gameOverFundingZero() {
   gameOverText = GAME_OVER_FUNDING_TEXT;
+  if (!gameVars.playedGameOverSound) {
+    playNoFunds();
+    gameVars.playedGameOverSound = true;
+  }
   gameOver();
 }
 
 function gameOverTimeZero() {
   gameOverText = GAME_OVER_TIME_TEXT;
+  if (!gameVars.playedGameOverSound) {
+    playElectionDay();
+    gameVars.playedGameOverSound = true;
+  }
   gameOver();
 }
 
@@ -1426,6 +1438,7 @@ interface GameVars {
   started: boolean;
   gameOver: boolean;
   readyToRestart: boolean;
+  playedGameOverSound: boolean;
   ballots: number;
   funding: number;
   timeLeft: number;
@@ -1580,8 +1593,6 @@ function unsetLand() {
 // TODO:
 // parrallax
 // lights on truck
-// clouds
-// game over sounds
 // what to do with fun color
 // curves
 // hills
