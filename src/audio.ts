@@ -33,14 +33,16 @@ const E = 329.63;
 const F = 349.23;
 const G = 392.00;
 const A = 440.00;
+const R = 1.00;
 
 // https://www.youtube.com/watch?v=PjwsAWomTFI
 // https://pages.mtu.edu/~suits/notefreqs.html
-//                      glo ry   glo   ry   ha   le  lu  ja    glo  ry   glo  ry   ha   le   lu  ja    glo ry   glo  ry  ha  le  lu   ja    his  tr  is    ma   chn  on
+//                      glo ry   glo   ry   ha   le  lu  ja   x    glo  ry   glo  ry   ha   le   lu  ja    x    glo ry   glo  ry  ha  le  lu   ja   x   his  tr  is    ma   chn  on
 // prettier-ignore
-const battleNotes   = [ C,  Bf,  Al,   C,   F,   G,   A,  F,   D,   E,   F,   E,   F,   D,   C,  Al,   C,  Bf,  Al,  C,  F,  G,   A,   F,   F,  G,   G,   F,   E,   F];
+const battleNotes   = [ C,  Bf,  Al,   C,   F,   G,   A,  F,  R,   D,   E,   F,   E,   F,   D,   C,  Al,   R,   C,  Bf,  Al,  C,  F,  G,   A,   F,  R,   F,  G,   G,   F,   E,   F];
 // prettier-ignore
-const notesDuration = [.4,  .1,  .1,  .1,  .1,  .1,  .4, .2,  .2,  .1,  .1,  .1,  .1,  .1,  .4,  .2,  .1,  .1,  .1, .1, .1, .1,  .1,  .1,  .2, .2,  .2,  .2,  .2,  .2];
+const notesDuration = [.4,  .1,  .1,  .1,  .1,  .1,  .4, .2, .03, .2,  .1,  .1,  .1,  .1,  .1,  .4,  .2,  .03, .1,  .1,  .1, .1, .1, .1,  .1,  .1,  .1, .2, .2,  .2,  .2,  .2,  .2];
+
 export const playElectionDay = () =>
   createSound(battleNotes, notesDuration, "triangle");
 
