@@ -52,11 +52,11 @@ const ROAD_WIDTH_PERCENT = 1.1;
 const ZERO_POS = { x: 0, y: 0, z: 0 };
 const UI_PADDING = 4;
 const FONT_SIZE = 20;
-const WALL_PARTICLES = 25;
+const WALL_PARTICLES = 55;
 const WALL_DIMENSIONS = 4;
-const WALL_PARTICLE_Y_VEL = -3;
-const WALL_PARTICLE_X_VEL = 1;
-const WALL_PARTICLE_DELAY = 10;
+const WALL_PARTICLE_Y_VEL = -2;
+const WALL_PARTICLE_X_VEL = 2;
+const WALL_PARTICLE_DELAY = 5;
 const SECOND_ROW_Y = UI_PADDING * 2 + FONT_SIZE;
 const MAX_FUNDING_BAR = width - UI_PADDING * 2;
 const HIT_TIME = 1.5;
@@ -265,7 +265,7 @@ const golds2: Sprite[] = range(GOLD_HIT_AMOUNT * 20).map(_ => {
   };
 });
 
-const wallParts: Sprite[] = range(WALL_PARTICLES * 10).map(() => {
+const wallParts: Sprite[] = range(WALL_PARTICLES * 20).map(() => {
   return {
     image: null,
     pos: {
