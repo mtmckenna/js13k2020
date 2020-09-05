@@ -8,6 +8,6 @@ module.exports = merge(common, {
   mode: "production",
   plugins: [
   new InlineChunkHtmlPlugin(HtmlWebpackPlugin, [".js"]),
-  new BundleAnalyzerPlugin({analyzerMode: "static"})
+  //new BundleAnalyzerPlugin({analyzerMode: "static"})
   ]
 });

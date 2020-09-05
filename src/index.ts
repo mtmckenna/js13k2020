@@ -1595,8 +1595,6 @@ function unsetLand() {
 // TODO:
 // increase walls as game carries on
 // add notes about making to election day is the goal
-// add better css bounce when land
-// instructions on the top
 // time running out sound,
 // make it clearer when running out of time
 // time running out visual indicator,
