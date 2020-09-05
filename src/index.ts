@@ -116,6 +116,13 @@ const OVLERLAP_MAP = {
   mailbox: handleMailboxOverlap
 };
 
+const TIME_WALLS: Array<{ time: number, walls: number}> = [
+  { time: 90, walls: 2},
+  { time: 60, walls: 3},
+  { time: 30, walls: 4},
+  { time: 10, walls: 5}
+];
+
 const carImage = new Image();
 carImage.src = carImageData;
 
@@ -381,7 +388,7 @@ const golds: RoadSprite[] = range(1).map(() => {
   };
 });
 
-const walls: RoadSprite[] = range(2).map(() => {
+function createWall() {
   return {
     image: wallImage,
     pos: {
@@ -401,6 +408,10 @@ const walls: RoadSprite[] = range(2).map(() => {
     active: false,
     dimensions: BIG_SPRITE_DIMENSIONS
   };
+}
+
+const walls: RoadSprite[] = range(2).map(() => {
+  return createWall();
 });
 
 const roadSprites: RoadSprite[] = [];
@@ -524,6 +535,18 @@ function runTitleScreen() {
   );
 }
 
+function advanceRoadSprites() {
+  roadSprites.forEach(sprite => {
+    const increase = spriteIncrease;
+    sprite.iCoord = clamp(
+      sprite.iCoord + increase,
+      skyHeight - SPRITE_DIMENSIONS * 1.5,
+      height - 1
+    );
+    sprite.i = round(sprite.iCoord);
+  });
+}
+
 function runGame(t: number) {
   if (readyToDecrementTime()) updateTimeLeft();
   realTime = t;
@@ -532,15 +555,8 @@ function runGame(t: number) {
     if (gameVars.readyToRestart && isButtonPressed()) restartGame();
   } else {
     handlePlayerInput(turningSpeed);
-    roadSprites.forEach(sprite => {
-      const increase = spriteIncrease;
-      sprite.iCoord = clamp(
-        sprite.iCoord + increase,
-        skyHeight - SPRITE_DIMENSIONS * 1.5,
-        height - 1
-      );
-      sprite.i = round(sprite.iCoord);
-    });
+    advanceRoadSprites();
+    addWall();
   }
 
   drawSky();
@@ -1093,6 +1109,18 @@ function drawUi() {
 
 function pad(num: number) {
   return `000${num}`.slice(-3);
+}
+
+function addWall() {
+  const { timeLeft } = gameVars;
+  const timeWalls = TIME_WALLS.filter(tw => timeLeft <= tw.time);
+  if (!timeWalls.length) return;
+  const timeWall = timeWalls[timeWalls.length - 1];
+  if (walls.length < timeWall.walls) {
+    const wall = createWall();
+    walls.push(wall);
+    roadSprites.push(wall);
+  }
 }
 
 function resetRoadSprite(sprite: RoadSprite) {
@@ -1658,18 +1686,19 @@ function unsetLand() {
 }
 
 // TODO:
-// increase walls as game carries on
 // add notes about making to election day is the goal
 // time running out sound,
 // make it clearer when running out of time
 // time running out visual indicator,
 // more intense funding running out visual indicator
+// add mouse controls back in
 // curves
 // hills
 // add flash of color/text when pick up mail
 // add flash of color/text when pick up gold
 // landing sound effect
 // parrallax
+// make truck a little red when it gets hit
 // lights on truck
 // what to do with fun color
 // bug where game starts over on mobile
