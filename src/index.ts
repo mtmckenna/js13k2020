@@ -55,8 +55,13 @@ const FONT_SIZE = 20;
 const WALL_PARTICLES = 55;
 const WALL_DIMENSIONS = 4;
 const WALL_PARTICLE_Y_VEL = -2;
-const WALL_PARTICLE_X_VEL = 2;
+const WALL_PARTICLE_X_VEL = 1;
 const WALL_PARTICLE_DELAY = 5;
+const TRUCK_SPARKS = 25;
+const TRUCK_SPARKS_DIMENSIONS = 2;
+const TRUCK_SPARK_Y_VEL = -1;
+const TRUCK_SPARK_X_VEL = 1;
+const TRUCK_SPARK_DELAY = 5;
 const SECOND_ROW_Y = UI_PADDING * 2 + FONT_SIZE;
 const MAX_FUNDING_BAR = width - UI_PADDING * 2;
 const HIT_TIME = 1.5;
@@ -83,6 +88,7 @@ const START_TIME = 90;
 const START_FUNDING = 100;
 const TOUCH_TIME = 300;
 const SHADOW_COLOR = "#EEE";
+const SPARK_COLOR = "#fc9003";
 const MAILBOX_CHANCE_SPAWN = 0.02;
 const MAILBOX_TIME_OFFSCREEN = 1;
 
@@ -284,6 +290,28 @@ const wallParts: Sprite[] = range(WALL_PARTICLES * 20).map(() => {
     animatedAt: 0,
     frame: 0,
     dimensions: WALL_DIMENSIONS
+  };
+});
+
+const truckSparks: Sprite[] = range(TRUCK_SPARKS * 20).map(() => {
+  return {
+    image: null,
+    pos: {
+      x: 0,
+      y: 0,
+      z: 0
+    },
+    vel: {
+      x: randomFloatBetween(-TRUCK_SPARK_X_VEL, TRUCK_SPARK_X_VEL),
+      y: TRUCK_SPARK_Y_VEL,
+      z: 0
+    },
+    alpha: 1,
+    active: false,
+    activatedAt: 0,
+    animatedAt: 0,
+    frame: 0,
+    dimensions: TRUCK_SPARKS_DIMENSIONS
   };
 });
 
@@ -571,6 +599,7 @@ function runGame(t: number) {
   drawEnvelopes();
   drawGolds();
   drawTruck();
+  drawTruckSparks();
 
   if (gameVars.funding <= 0) {
     gameOverFundingZero();
@@ -792,6 +821,7 @@ function handlePlayerInput(turningSpeed: number) {
     playGroundEngine();
     unsetLand();
     window.setTimeout(() => setLand(), 0);
+    activateTruckSparks();
   }
 
   player.pos.y += clamp(player.vel.y, MAX_NEGATIVE_VEL, MAX_POSITIVE_VEL);
@@ -801,6 +831,23 @@ function handlePlayerInput(turningSpeed: number) {
   updatePlayerPos(player.pos.x, player.pos.y);
 }
 
+function activateTruckSparks() {
+  const halfWidth =  floor(player.dimensions / 2);
+  const inactive = truckSparks.filter(spark => spark.active !== true);
+  const toActivate = truckSparks.slice(
+    Math.max(inactive.length - TRUCK_SPARKS, 0)
+  );
+  toActivate.forEach((spark, i) => {
+    const left = random() > .5 ? -1 : 1;
+    setTimeout(() => {
+      spark.active = true;
+      spark.activatedAt = gameTime;
+      spark.pos.y = playerI + player.dimensions;
+      spark.pos.x = xCenter + left * halfWidth;
+    }, TRUCK_SPARK_DELAY * i);
+  });
+}
+
 function handleOverlap(sprite: RoadSprite) {
   if (OVLERLAP_MAP[sprite.name]) OVLERLAP_MAP[sprite.name](sprite);
   deactivateSprite(sprite);
@@ -808,6 +855,7 @@ function handleOverlap(sprite: RoadSprite) {
 
 function handleWallOverlap(sprite: RoadSprite) {
   if (inGracePeriod()) return;
+  const halfWidth = player.dimensions / 3;
   gameVars.lastHitAt = gameTime;
   gameVars.funding = max(gameVars.funding - FUNDING_HIT_AMOUNT, 0);
   setShake();
@@ -820,8 +868,8 @@ function handleWallOverlap(sprite: RoadSprite) {
     setTimeout(() => {
       part.active = true;
       part.activatedAt = gameTime;
-      part.pos.y = playerI;
-      part.pos.x = spriteOffset(sprite);
+      part.pos.y = playerI + randomFloatBetween(-halfWidth, halfWidth);
+      part.pos.x = spriteOffset(sprite) + randomFloatBetween(-halfWidth, halfWidth);
     }, WALL_PARTICLE_DELAY * i);
   });
 }
@@ -1084,6 +1132,23 @@ function getCollectablePosition(sprite: Sprite, yEndPosition = 0): { x: number; 
   const x2 = lerp(x, 0, t);
   const y2 = lerp(y, yEndPosition, t);
   return { x: x2, y: y2 };
+}
+
+function drawTruckSparks() {
+  truckSparks
+    .filter(sprite => sprite.active)
+    .forEach(part => {
+      const { x, y } = getWallParticlePosition(part);
+
+      if (y >= height) {
+        part.active = false;
+        part.vel.y = WALL_PARTICLE_Y_VEL;
+        return;
+      }
+
+      ctx.fillStyle = SPARK_COLOR;
+      ctx.fillRect(x, y, part.dimensions, part.dimensions);
+    });
 }
 
 function drawWallParticles() {
@@ -1599,11 +1664,11 @@ function unsetLand() {
 // make it clearer when running out of time
 // time running out visual indicator,
 // more intense funding running out visual indicator
-// dust/sparks when you land
 // curves
 // hills
 // add flash of color/text when pick up mail
 // add flash of color/text when pick up gold
+// landing sound effect
 // parrallax
 // lights on truck
 // what to do with fun color
