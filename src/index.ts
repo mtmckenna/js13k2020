@@ -80,8 +80,8 @@ const ALPHA_INCREASE_AMOUNT = 0.075;
 const COLLECTABLE_DIMENSION = 16;
 const ENVELOPE_TIME = 5;
 const ENVELOPE_DELAY = 100;
-const GAME_OVER_FUNDING_TEXT = "RAN OUT OF FUNDS";
-const GAME_OVER_TIME_TEXT = "IT IS ELECTION DAY";
+const GAME_OVER_FUNDING_TEXT = "RAN OUT OF FUNDS!";
+const GAME_OVER_TIME_TEXT = "IT IS ELECTION DAY!";
 const ROAD_SPRITE_SPAWN_X = width / 4;
 const RESTART_TIMEOUT_TIME = 1000;
 const START_TIME = 90;
@@ -91,8 +91,10 @@ const SHADOW_COLOR = "#EEE";
 const SPARK_COLOR = "#fc9003";
 const MAILBOX_CHANCE_SPAWN = 0.02;
 const MAILBOX_TIME_OFFSCREEN = 1;
+const INITIAL_WALLS = 2;
 
 let gameOverText = "";
+let ballotText = "";
 let instructionsAlpha = 1.0;
 let restartTimeout: number = null;
 
@@ -410,9 +412,7 @@ function createWall() {
   };
 }
 
-const walls: RoadSprite[] = range(2).map(() => {
-  return createWall();
-});
+const walls: RoadSprite[] = range(INITIAL_WALLS).map(() => createWall());
 
 const roadSprites: RoadSprite[] = [];
 
@@ -737,10 +737,12 @@ function restartGame() {
   };
 
   restartTimeout = null;
-  walls.forEach(s => resetRoadSprite(s));
   golds.forEach(s => resetRoadSprite(s));
   rightMailboxes.forEach(s => resetRoadSprite(s));
   leftMailboxes.forEach(s => resetRoadSprite(s));
+  clearArray(walls);
+  range(INITIAL_WALLS).forEach(() => walls.push(createWall()));
+  buildUpRoadSprites();
 }
 
 function gameOver() {
@@ -756,11 +758,9 @@ function gameOver() {
   }
 
   drawText(canvas, gameOverText, 2 * UI_PADDING, UI_PADDING, FONT_SIZE);
-
-  const ballotText = `YOU GOT ${gameVars.ballots} BALLOTS`;
   drawText(canvas, ballotText, 2 * UI_PADDING, 2 * SECOND_ROW_Y, FONT_SIZE);
 
-  const votingText = "VOTING IS GOOD";
+  const votingText = "VOTING IS GOOD!";
   drawText(canvas, votingText, 2 * UI_PADDING, 4 * SECOND_ROW_Y, FONT_SIZE);
 
   if (gameVars.readyToRestart) {
@@ -792,6 +792,7 @@ function gameOver() {
 
 function gameOverFundingZero() {
   gameOverText = GAME_OVER_FUNDING_TEXT;
+  ballotText = `TRY AGAIN PLEASE!`;
   if (!gameVars.playedGameOverSound) {
     playNoFunds();
     gameVars.playedGameOverSound = true;
@@ -801,6 +802,7 @@ function gameOverFundingZero() {
 
 function gameOverTimeZero() {
   gameOverText = GAME_OVER_TIME_TEXT;
+  ballotText = `YOU GOT ${gameVars.ballots} BALLOTS!`;
   if (!gameVars.playedGameOverSound) {
     playElectionDay();
     gameVars.playedGameOverSound = true;
@@ -1307,6 +1309,11 @@ async function load() {
   image.src = imageData;
   addFavicon();
   rightMailboxes.forEach(mb => (mb.image = image));
+  buildUpRoadSprites();
+}
+
+function buildUpRoadSprites() {
+  clearArray(roadSprites);
   roadSprites.push(...rightMailboxes, ...leftMailboxes, ...golds, ...walls);
 }
 
@@ -1683,6 +1690,12 @@ function setLand() {
 function unsetLand() {
   if (!canvas.classList.contains(LAND_CLASS_NAME)) return;
   canvas.classList.remove(LAND_CLASS_NAME);
+}
+
+function clearArray<T>(array: T[]) {
+  while (array.length) {
+    array.pop();
+  }
 }
 
 // TODO:
