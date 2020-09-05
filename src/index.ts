@@ -92,6 +92,8 @@ const SPARK_COLOR = "#fc9003";
 const MAILBOX_CHANCE_SPAWN = 0.02;
 const MAILBOX_TIME_OFFSCREEN = 1;
 const INITIAL_WALLS = 2;
+const INTRO_TIME = 2;
+const GAME_START_DELAY = 18;
 
 let gameOverText = "";
 let ballotText = "";
@@ -106,6 +108,7 @@ let gameVars: GameVars = {
   gameOver: false,
   readyToRestart: false,
   playedGameOverSound: false,
+  startedAt: null,
   lastHitAt: null,
   lastFlashedAt: null,
   lastTimeDecrementedAt: null,
@@ -118,11 +121,11 @@ const OVLERLAP_MAP = {
   mailbox: handleMailboxOverlap
 };
 
-const TIME_WALLS: Array<{ time: number, walls: number}> = [
-  { time: 90, walls: 2},
-  { time: 60, walls: 3},
-  { time: 30, walls: 4},
-  { time: 10, walls: 5}
+const TIME_WALLS: Array<{ time: number; walls: number }> = [
+  { time: START_TIME, walls: 2 },
+  { time: 60, walls: 3 },
+  { time: 30, walls: 4 },
+  { time: 10, walls: 5 }
 ];
 
 const carImage = new Image();
@@ -251,7 +254,7 @@ const clouds: Sprite[] = range(10).map(_ => {
       y: randomIntBetween(0, skyHeight - BIG_SPRITE_DIMENSIONS),
       z: 0
     },
-    vel: { x: randomFloatBetween(-.6, -.2), y: 0, z: 0 },
+    vel: { x: randomFloatBetween(-0.6, -0.2), y: 0, z: 0 },
     alpha: 1,
     active: true,
     activatedAt: 0,
@@ -422,6 +425,7 @@ const TURNING_SPEED = 4.8;
 
 const SLOW_MULTIPLIER = 4;
 const normalTime = 70;
+//const normalTime = 1;
 const SIDE_SPRITE_INCREASE = 1.4;
 const slowTime = normalTime * SLOW_MULTIPLIER;
 let turningSpeed = TURNING_SPEED;
@@ -442,6 +446,7 @@ function tick(t: number) {
   spriteIncrease = SIDE_SPRITE_INCREASE * graceMultiplier;
 
   if (gameVars.started) {
+    console.log("STARTED");
     runGame(t);
   } else {
     runTitleScreen();
@@ -463,7 +468,9 @@ function runTitleScreen() {
   if (isButtonPressed()) {
     if (!engineAlreadyStarted()) startEngines();
     playElectionDay();
+    gameVars.startedAt = gameTime;
     gameVars.started = true;
+    console.log(gameVars.startedAt, "HI");
   }
 
   drawSky();
@@ -535,7 +542,42 @@ function runTitleScreen() {
   );
 }
 
+function drawInstructions() {
+  if (gameVars.timeLeft < START_TIME) return;
+  const yOffset = 50;
+  const yOffset2 = 70;
+  drawText(
+    canvas,
+    "COLLECT BALLOTS",
+    UI_PADDING + 10 * UI_PADDING,
+    UI_PADDING + yOffset,
+    FONT_SIZE
+  );
+  drawText(
+    canvas,
+    "BEFORE ELECTION DAY!",
+    UI_PADDING,
+    SECOND_ROW_Y + yOffset,
+    FONT_SIZE
+  );
+  drawText(
+    canvas,
+    "KEEP DEMOCRACY",
+    UI_PADDING + 10 * UI_PADDING,
+    UI_PADDING + yOffset + yOffset2,
+    FONT_SIZE
+  );
+  drawText(
+    canvas,
+    "ROLLING ALONG!",
+    UI_PADDING + 10 * UI_PADDING,
+    SECOND_ROW_Y + yOffset + yOffset2,
+    FONT_SIZE
+  );
+}
+
 function advanceRoadSprites() {
+  if (gameVars.timeLeft >= START_TIME) return;
   roadSprites.forEach(sprite => {
     const increase = spriteIncrease;
     sprite.iCoord = clamp(
@@ -549,6 +591,7 @@ function advanceRoadSprites() {
 
 function runGame(t: number) {
   if (readyToDecrementTime()) updateTimeLeft();
+
   realTime = t;
 
   if (gameVars.gameOver) {
@@ -616,6 +659,7 @@ function runGame(t: number) {
   drawGolds();
   drawTruck();
   drawTruckSparks();
+  drawInstructions();
 
   if (gameVars.funding <= 0) {
     gameOverFundingZero();
@@ -629,6 +673,7 @@ function runGame(t: number) {
 }
 
 function drawRoadSprites() {
+  if (gameVars.timeLeft >= START_TIME) return;
   roadSprites.forEach(sprite => {
     if (sprite.i === -1) return;
     if (!sprite.active && !gameVars.gameOver) {
@@ -730,6 +775,7 @@ function restartGame() {
     gameOver: false,
     playedGameOverSound: false,
     readyToRestart: false,
+    startedAt: gameTime,
     lastHitAt: null,
     lastFlashedAt: null,
     lastTimeDecrementedAt: null,
@@ -850,13 +896,13 @@ function handlePlayerInput(turningSpeed: number) {
 }
 
 function activateTruckSparks() {
-  const halfWidth =  floor(player.dimensions / 2);
+  const halfWidth = floor(player.dimensions / 2);
   const inactive = truckSparks.filter(spark => spark.active !== true);
   const toActivate = truckSparks.slice(
     Math.max(inactive.length - TRUCK_SPARKS, 0)
   );
   toActivate.forEach((spark, i) => {
-    const left = random() > .5 ? -1 : 1;
+    const left = random() > 0.5 ? -1 : 1;
     setTimeout(() => {
       spark.active = true;
       spark.activatedAt = gameTime;
@@ -887,7 +933,8 @@ function handleWallOverlap(sprite: RoadSprite) {
       part.active = true;
       part.activatedAt = gameTime;
       part.pos.y = playerI + randomFloatBetween(-halfWidth, halfWidth);
-      part.pos.x = spriteOffset(sprite) + randomFloatBetween(-halfWidth, halfWidth);
+      part.pos.x =
+        spriteOffset(sprite) + randomFloatBetween(-halfWidth, halfWidth);
     }, WALL_PARTICLE_DELAY * i);
   });
 }
@@ -956,13 +1003,19 @@ function activateSprite(sprite: RoadSprite) {
 }
 
 function readyToDecrementTime() {
-  return timeSinceLastTimeDecrement() > GAME_UPDATE_TIME;
+  return (
+    timeSinceLastTimeDecrement() > GAME_UPDATE_TIME && gameStartDelayHasPast()
+  );
 }
 
 function inGracePeriod() {
   return (
     !!gameVars.lastHitAt && timeSinceLastHit() < HIT_TIME && !gameVars.gameOver
   );
+}
+
+function gameStartDelayHasPast() {
+  return !!gameVars.startedAt && gameTime > gameVars.startedAt + GAME_START_DELAY;
 }
 
 function flashedRecently() {
@@ -1023,7 +1076,7 @@ function drawTruck() {
     player.pos,
     // Want car to be at the middle so start there and subtract off the player position
     xCenter - player.pos.x,
-    playerI,
+    playerI - getIntroOffset(),
     player.dimensions,
     true,
     player.alpha,
@@ -1092,18 +1145,19 @@ function drawCity() {
 }
 
 function drawUi() {
+  const introOffset = getIntroOffset();
   drawText(
     canvas,
     `${pad(gameVars.ballots)} BALLOTS`,
     UI_PADDING,
-    UI_PADDING,
+    UI_PADDING + introOffset,
     FONT_SIZE
   );
   drawText(
     canvas,
     pad(gameVars.timeLeft),
     width - 3 * (FONT_SIZE * 0.8),
-    UI_PADDING,
+    UI_PADDING + introOffset,
     FONT_SIZE
   );
   drawFundingMeter();
@@ -1140,11 +1194,18 @@ function resetRoadSprite(sprite: RoadSprite) {
 }
 
 function drawFundingMeter() {
+  const introOffset = getIntroOffset();
   ctx.fillStyle =
     gameVars.funding < 20 ? BAD_FUNDING_COLOR : GOOD_FUNDING_COLOR;
   const width = floor((MAX_FUNDING_BAR * gameVars.funding) / 100);
-  ctx.fillRect(UI_PADDING, SECOND_ROW_Y, width, FONT_SIZE + 1);
-  drawText(canvas, "FUNDING", UI_PADDING, SECOND_ROW_Y, FONT_SIZE);
+  ctx.fillRect(UI_PADDING, SECOND_ROW_Y + introOffset, width, FONT_SIZE + 1);
+  drawText(
+    canvas,
+    "FUNDING",
+    UI_PADDING,
+    SECOND_ROW_Y + introOffset,
+    FONT_SIZE
+  );
 }
 
 function getWallParticlePosition(particle: Sprite): { x: number; y: number } {
@@ -1155,7 +1216,17 @@ function getWallParticlePosition(particle: Sprite): { x: number; y: number } {
   return { x, y };
 }
 
-function getCollectablePosition(sprite: Sprite, yEndPosition = 0): { x: number; y: number } {
+function getIntroOffset(): number {
+  const { startedAt } = gameVars;
+  const t = clamp((gameTime - startedAt) / INTRO_TIME, 0, 1);
+  const y = lerp(-height / 4, 0, t);
+  return y;
+}
+
+function getCollectablePosition(
+  sprite: Sprite,
+  yEndPosition = 0
+): { x: number; y: number } {
   const { x, y } = sprite.pos;
   const { activatedAt } = sprite;
   const t = clamp((gameTime - activatedAt) / ENVELOPE_TIME, 0, 1);
@@ -1219,12 +1290,10 @@ function drawGolds() {
     });
 }
 
-
 function drawClouds() {
   clouds
     .filter(sprite => sprite.active)
     .forEach(cloud => {
-
       if (cloud.pos.x < -width) {
         cloud.pos.x = width + cloud.dimensions * 3;
         cloud.pos.y = randomIntBetween(0, skyHeight - BIG_SPRITE_DIMENSIONS);
@@ -1235,7 +1304,7 @@ function drawClouds() {
       ctx.drawImage(
         cloud.image,
         0,
-        cloud.frame * cloud.dimensions / 2,
+        (cloud.frame * cloud.dimensions) / 2,
         cloud.dimensions,
         cloud.dimensions / 2,
         cloud.pos.x - player.pos.x,
@@ -1323,6 +1392,7 @@ function clamp(num: number, min: number, max: number): number {
 
 function jump() {
   unsetLand();
+  if (getIntroOffset() !== 0) return;
   if (player.pos.y !== 0) return;
   player.vel.y = JUMP_VELOCITY;
   playAirEngine();
@@ -1411,7 +1481,7 @@ window.addEventListener("touchstart", (e: TouchEvent) => {
 
 window.addEventListener("touchend", () => {
   pointerState.down = false;
-  if ((realTime - pointerState.downAt) < TOUCH_TIME) {
+  if (realTime - pointerState.downAt < TOUCH_TIME) {
     jump();
     pointerState.upAt = gameTime;
   }
@@ -1471,7 +1541,6 @@ async function flipImage(imageData: any): Promise<string> {
 
   return new Promise(resolve => {
     image.onload = () => {
-      console.log(image.width);
       imgCtx.translate(image.width, 0);
       imgCtx.scale(-1, 1);
       imgCtx.drawImage(image, 0, 0);
@@ -1543,6 +1612,7 @@ interface GameVars {
   playedGameOverSound: boolean;
   ballots: number;
   funding: number;
+  startedAt: number;
   timeLeft: number;
   lastHitAt: number;
   lastFlashedAt: number;
@@ -1715,4 +1785,3 @@ function clearArray<T>(array: T[]) {
 // lights on truck
 // what to do with fun color
 // bug where game starts over on mobile
-
