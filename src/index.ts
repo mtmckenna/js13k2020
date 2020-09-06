@@ -26,7 +26,7 @@ import city3ImageData from "../assets/city3-big.png";
 import envelopeImageData from "../assets/envelope2.png";
 import cloudsImageData from "../assets/clouds-big.png";
 
-const { random, floor, round, min, max } = Math;
+const { random, floor, round, min, max, sin } = Math;
 
 const canvasWrapper: HTMLElement = document.querySelector("#canvas-wrapper");
 const canvas: HTMLCanvasElement = document.querySelector(
@@ -197,21 +197,21 @@ for (let i = 0; i < height; i++) {
   zMap.push(z);
 }
 
-const roadSegments: RoadSegment[] = range(zMap.length * 3).map((i) => {
+const roadSegments: RoadSegment[] = range(zMap.length * 10).map((i) => {
   return {
     i: i % zMap.length,
-    dx: dxForI(i)
+    dx: dxForI(i),
   };
 });
 
 let movingSegment: RoadSegment = {
   i: roadSegments[0].i,
-  dx: roadSegments[0].dx 
+  dx: roadSegments[0].dx,
 };
 
 let bottomSegment: RoadSegment = {
   i: roadSegments[zMap.length - 1].i,
-  dx: roadSegments[zMap.length - 1].dx 
+  dx: roadSegments[zMap.length - 1].dx,
 };
 
 const roadWidths: Array<{ x1: number; x2: number }> = [];
@@ -608,7 +608,7 @@ function advanceRoadSprites() {
 }
 
 function dxForI(i: number) {
-  return 2 * Math.sin(i / 2000);
+  return sin(i / 1000);
 }
 
 function runGame(t: number) {
@@ -648,6 +648,7 @@ function runGame(t: number) {
 
     ddx += dx;
     xOffset += ddx;
+
     drawRoad(i, textureCoord);
   }
 
@@ -1764,9 +1765,8 @@ function clearArray<T>(array: T[]) {
 // time running out sound,
 // time running out visual indicator,
 // more intense funding running out visual indicator
-// curves
-// hills
 // add flash of color/text when pick up mail
 // add flash of color/text when pick up gold
 // landing sound effect
 // make truck a little red when it gets hit
+// hills
