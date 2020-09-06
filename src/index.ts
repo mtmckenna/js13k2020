@@ -95,6 +95,8 @@ const INITIAL_WALLS = 2;
 const INTRO_TIME = 2;
 const GAME_START_DELAY = 18;
 
+let dx = 0;
+let ddx = 0;
 let gameOverText = "";
 let ballotText = "";
 let instructionsAlpha = 1.0;
@@ -194,6 +196,23 @@ for (let i = 0; i < height; i++) {
   const z = d === 0 ? 0 : worldY / d;
   zMap.push(z);
 }
+
+const roadSegments: RoadSegment[] = range(zMap.length * 3).map((i) => {
+  return {
+    i: i % zMap.length,
+    dx: dxForI(i)
+  };
+});
+
+let movingSegment: RoadSegment = {
+  i: roadSegments[0].i,
+  dx: roadSegments[0].dx 
+};
+
+let bottomSegment: RoadSegment = {
+  i: roadSegments[zMap.length - 1].i,
+  dx: roadSegments[zMap.length - 1].dx 
+};
 
 const roadWidths: Array<{ x1: number; x2: number }> = [];
 for (let i = 0; i < zMap.length; i++) {
@@ -433,6 +452,7 @@ let spriteIncrease = SIDE_SPRITE_INCREASE;
 let xOffset = 0;
 let graceMultiplier = 1;
 
+
 function tick(t: number) {
   ctx.globalAlpha = 1.0;
   requestAnimationFrame(tick);
@@ -446,7 +466,6 @@ function tick(t: number) {
   spriteIncrease = SIDE_SPRITE_INCREASE * graceMultiplier;
 
   if (gameVars.started) {
-    console.log("STARTED");
     runGame(t);
   } else {
     runTitleScreen();
@@ -470,7 +489,6 @@ function runTitleScreen() {
     playElectionDay();
     gameVars.startedAt = gameTime;
     gameVars.started = true;
-    console.log(gameVars.startedAt, "HI");
   }
 
   drawSky();
@@ -589,9 +607,12 @@ function advanceRoadSprites() {
   });
 }
 
+function dxForI(i: number) {
+  return 2 * Math.sin(i / 2000);
+}
+
 function runGame(t: number) {
   if (readyToDecrementTime()) updateTimeLeft();
-
   realTime = t;
 
   if (gameVars.gameOver) {
@@ -607,53 +628,41 @@ function runGame(t: number) {
   drawClouds();
   drawCity();
   let textureCoord = 0;
-  //let dx = 0;
-  //let ddx = 0;
-  //movingSegment.i -= .5;
+  movingSegment.i -= .5;
 
   if (!inGracePeriod()) unsetShake();
 
+  xOffset = xCenter + player.pos.x;
   for (let i = zMap.length - 1; i > skyHeight; i--) {
     textureCoord += MAX_TEX / TEX_DEN;
 
-    drawRoad(i, textureCoord);
+    dx = 0;
+    ddx = 0;
 
-    //const currentSideSprite = sideSprites[sideSpriteIndex];
-    //while (sideSpriteIndex < sideSprites.length) {
-    //if (currentSideSprite.pos.z <= zWorld) {
-    //console.log(currentSideSprite.zIndex, currentSideSprite.pos.z, gameTime);
-    //currentSideSprite.zIndex = i;
-    ////currentSprite.zIndex = skyHeight + i;
-    //sideSpriteIndex++;
-    //} else {
-    //break;
-    //}
-    /*}*/
-    /*
-    // Handle curves
+    //Handle curves
     if (i < movingSegment.i) {
       dx = bottomSegment.dx;
-    } else if (i > movingSegment.i) {
+    } else if (i >= movingSegment.i) {
       dx = movingSegment.dx;
     }
 
-    // Moving segment reached horizon
-    if (movingSegment.i <= 0) {
-      bottomSegment.dx = movingSegment.dx;
-      bottomSegment.i = movingSegment.i;
-      movingSegment.i = zMap.length - 1;
-      const segmentIndex = floor(gameTime % (roadSegments.length - 1));
-      movingSegment.dx = roadSegments[segmentIndex];
-    }*/
+    ddx += dx;
+    xOffset += ddx;
+    drawRoad(i, textureCoord);
+  }
 
-    //ddx += dx;
-    //xOffset += ddx;
+  //Moving segment reached horizon
+  if (movingSegment.i <= 0) {
+    bottomSegment.dx = movingSegment.dx;
+    bottomSegment.i = movingSegment.i;
 
-    //ctx.strokeStyle = funColor(index);
+    movingSegment.i = zMap.length - 1;
+    const segmentIndex = randomIntBetween(0, roadSegments.length - 1);
+    movingSegment.dx = roadSegments[segmentIndex].dx;
   }
 
   drawRoadSprites();
-  if (!gameVars.gameOver) drawUi();
+  drawUi();
   drawWallParticles();
   drawEnvelopes();
   drawGolds();
@@ -759,8 +768,7 @@ function spriteOffset(sprite: RoadSprite) {
   const roadWidth = roadWidths[sprite.i];
   return (
     roadWidth.x1 +
-    (roadWidth.x2 - roadWidth.x1) * sprite.roadPercent -
-    player.pos.x
+    (roadWidth.x2 - roadWidth.x1) * sprite.roadPercent - xOffset + xCenter
   );
 }
 
@@ -890,7 +898,7 @@ function handlePlayerInput(turningSpeed: number) {
 
   player.pos.y += clamp(player.vel.y, MAX_NEGATIVE_VEL, MAX_POSITIVE_VEL);
   player.pos.x = clamp(player.pos.x, -PLAYER_EDGE, PLAYER_EDGE);
-  xOffset = xCenter + player.pos.x;
+  //xOffset = xCenter + player.pos.x;
 
   updatePlayerPos(player.pos.x, player.pos.y);
 }
@@ -1145,6 +1153,7 @@ function drawCity() {
 }
 
 function drawUi() {
+  if (gameVars.gameOver) return;
   const introOffset = getIntroOffset();
   drawText(
     canvas,
@@ -1625,29 +1634,9 @@ interface GameVars {
 //i: number;
 //}
 
-//interface RoadSegment {
-//i: number;
-//dx: number;
-//}
-
-function iForZPos(t: number) {
-  let l = 0;
-  let r = zMap.length - 1;
-
-  let i = -1;
-  while (l <= r) {
-    i = floor((l + r) / 2);
-    const z = zMap[i];
-    if (z < t) {
-      r = i - 1;
-    } else if (z > t) {
-      l = i + 1;
-    } else {
-      return i;
-    }
-  }
-
-  return i;
+interface RoadSegment {
+  i: number;
+  dx: number;
 }
 
 // https://www.iquilezles.org/www/articles/palettes/palettes.htm
@@ -1769,19 +1758,15 @@ function clearArray<T>(array: T[]) {
 }
 
 // TODO:
-// add notes about making to election day is the goal
-// time running out sound,
+// add mouse controls back in
+// what to do with fun color
 // make it clearer when running out of time
+// time running out sound,
 // time running out visual indicator,
 // more intense funding running out visual indicator
-// add mouse controls back in
 // curves
 // hills
 // add flash of color/text when pick up mail
 // add flash of color/text when pick up gold
 // landing sound effect
-// parrallax
 // make truck a little red when it gets hit
-// lights on truck
-// what to do with fun color
-// bug where game starts over on mobile

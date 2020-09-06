@@ -10,7 +10,8 @@ compressor.connect(audioContext.destination);
 
 const gain = audioContext.createGain();
 gain.connect(compressor);
-gain.gain.value = 0.05;
+//gain.gain.value = 0.05;
+gain.gain.value = 0.00;
 
 const groundEngineHz = [50, 70];
 const airEngineHz = [80, 100];
