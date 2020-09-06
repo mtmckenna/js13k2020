@@ -628,7 +628,7 @@ function runGame(t: number) {
   drawClouds();
   drawCity();
   let textureCoord = 0;
-  movingSegment.i -= .5;
+  movingSegment.i -= spriteIncrease;
 
   if (!inGracePeriod()) unsetShake();
 
