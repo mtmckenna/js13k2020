@@ -76,7 +76,7 @@ const GAME_UPDATE_TIME = 5;
 const MAX_ROAD_WIDTH = width * ROAD_WIDTH_PERCENT;
 const SHAKE_CLASS_NAME = "shake";
 const LAND_CLASS_NAME = "land";
-const ALPHA_INCREASE_AMOUNT = 0.075;
+const ALPHA_INCREASE_AMOUNT = 0.09;
 const COLLECTABLE_DIMENSION = 16;
 const ENVELOPE_TIME = 5;
 const ENVELOPE_DELAY = 100;
@@ -94,6 +94,8 @@ const MAILBOX_TIME_OFFSCREEN = 1;
 const INITIAL_WALLS = 2;
 const INTRO_TIME = 2;
 const GAME_START_DELAY = 18;
+const CURVE_AMPLITUDE = .0015;
+const CURVE_FREQUENCY = 100;
 
 let dx = 0;
 let ddx = 0;
@@ -188,6 +190,7 @@ let realTime = null;
 let gameTime = 0;
 let gameTimeAbsolute = 0;
 
+const curveOffsets: number[] = [];
 const cameraY = 30;
 const zMap: number[] = [];
 for (let i = 0; i < height; i++) {
@@ -197,7 +200,11 @@ for (let i = 0; i < height; i++) {
   zMap.push(z);
 }
 
-const roadSegments: RoadSegment[] = range(zMap.length * 10).map((i) => {
+for (let i = 0; i < floor(height - skyHeight); i++) {
+  curveOffsets[i] = 0;
+}
+
+const roadSegments: RoadSegment[] = range(zMap.length * 4).map((i) => {
   return {
     i: i % zMap.length,
     dx: dxForI(i),
@@ -364,7 +371,8 @@ const leftMailboxes: RoadSprite[] = range(1).map(() => {
     lastOnScreenAt: null,
     roadPercent: random(),
     active: false,
-    dimensions: BIG_SPRITE_DIMENSIONS
+    dimensions: BIG_SPRITE_DIMENSIONS,
+    debug: false
   };
 });
 
@@ -386,7 +394,8 @@ const rightMailboxes: RoadSprite[] = range(1).map(() => {
     lastOnScreenAt: null,
     roadPercent: random(),
     active: false,
-    dimensions: BIG_SPRITE_DIMENSIONS
+    dimensions: BIG_SPRITE_DIMENSIONS,
+    debug: false
   };
 });
 
@@ -408,11 +417,12 @@ const golds: RoadSprite[] = range(1).map(() => {
     lastOnScreenAt: null,
     roadPercent: random(),
     active: false,
-    dimensions: SPRITE_DIMENSIONS
+    dimensions: SPRITE_DIMENSIONS,
+    debug: false
   };
 });
 
-function createWall() {
+function createWall(): RoadSprite {
   return {
     image: wallImage,
     pos: {
@@ -430,7 +440,8 @@ function createWall() {
     roadPercent: random(),
     lastOnScreenAt: null,
     active: false,
-    dimensions: BIG_SPRITE_DIMENSIONS
+    dimensions: BIG_SPRITE_DIMENSIONS,
+    debug: false,
   };
 }
 
@@ -594,21 +605,36 @@ function drawInstructions() {
   );
 }
 
+
 function advanceRoadSprites() {
   if (gameVars.timeLeft >= START_TIME) return;
   roadSprites.forEach(sprite => {
     const increase = spriteIncrease;
     sprite.iCoord = clamp(
       sprite.iCoord + increase,
-      skyHeight - SPRITE_DIMENSIONS * 1.5,
+      skyHeight - sprite.dimensions * scaleForI(skyHeight),
       height - 1
     );
     sprite.i = round(sprite.iCoord);
   });
 }
 
+/*
+function advanceRoadSprites() {
+  if (gameVars.timeLeft >= START_TIME) return;
+  roadSprites.forEach(sprite => {
+    const increase = spriteIncrease;
+    sprite.iCoord = clamp(
+      sprite.iCoord + increase,
+      skyHeight - sprite.dimensions * 1.5,
+      height - 1
+    );
+    sprite.i = round(sprite.iCoord);
+  });
+}
+*/
 function dxForI(i: number) {
-  return sin(i / 1000);
+  return CURVE_AMPLITUDE * sin(i * CURVE_FREQUENCY);
 }
 
 function runGame(t: number) {
@@ -633,12 +659,11 @@ function runGame(t: number) {
   if (!inGracePeriod()) unsetShake();
 
   xOffset = xCenter + player.pos.x;
+  dx = 0;
+  ddx = 0;
+
   for (let i = zMap.length - 1; i > skyHeight; i--) {
     textureCoord += MAX_TEX / TEX_DEN;
-
-    dx = 0;
-    ddx = 0;
-
     //Handle curves
     if (i < movingSegment.i) {
       dx = bottomSegment.dx;
@@ -647,7 +672,7 @@ function runGame(t: number) {
     }
 
     ddx += dx;
-    xOffset += ddx;
+    curveOffsets[i - skyHeight] += ddx;
 
     drawRoad(i, textureCoord);
   }
@@ -660,6 +685,7 @@ function runGame(t: number) {
     movingSegment.i = zMap.length - 1;
     const segmentIndex = randomIntBetween(0, roadSegments.length - 1);
     movingSegment.dx = roadSegments[segmentIndex].dx;
+    curveOffsets.pop();
   }
 
   drawRoadSprites();
@@ -703,7 +729,10 @@ function drawRoadSprites() {
       sprite.i,
       sprite.dimensions,
       false,
-      sprite.alpha
+      sprite.alpha,
+      0,
+      0,
+      sprite.debug
     );
 
     if (sprite.i > zMap.length - 2) deactivateSprite(sprite);
@@ -718,12 +747,12 @@ function drawRoad(i: number, textureCoord: number) {
   const roadWidth = roadWidths[i];
   const percent = max(i / groundHeight, 0.3);
   const totalPercent = i / height;
-
+  const curve = curveOffsets[i - skyHeight];
   const currentRoadWidth = MAX_ROAD_WIDTH * totalPercent;
   ctx.strokeStyle = index < MAX_TEX / 2 ? grass1 : grass2;
   ctx.beginPath();
   ctx.moveTo(round(0), i);
-  const x1 = floor((width - currentRoadWidth) / 2 - xOffset + xCenter);
+  const x1 = floor((width - currentRoadWidth) / 2 - xOffset + xCenter + curve);
   ctx.lineTo(x1, i);
   ctx.closePath();
   ctx.stroke();
@@ -737,9 +766,9 @@ function drawRoad(i: number, textureCoord: number) {
 
   ctx.strokeStyle = road2;
   ctx.beginPath();
-  ctx.moveTo(round(roadWidth.x1 - xOffset + xCenter), i);
+  ctx.moveTo(round(roadWidth.x1 - xOffset + xCenter + curve), i);
   ctx.lineTo(
-    round(roadWidth.x1 + sideLineWidth * percent - xOffset + xCenter),
+    round(roadWidth.x1 + sideLineWidth * percent - xOffset + xCenter + curve),
     i
   );
   ctx.closePath();
@@ -747,9 +776,9 @@ function drawRoad(i: number, textureCoord: number) {
 
   ctx.strokeStyle = road2;
   ctx.beginPath();
-  ctx.moveTo(round(roadWidth.x2 - xOffset + xCenter), i);
+  ctx.moveTo(round(roadWidth.x2 - xOffset + xCenter + curve), i);
   ctx.lineTo(
-    round(roadWidth.x2 - sideLineWidth * percent - xOffset + xCenter),
+    round(roadWidth.x2 - sideLineWidth * percent - xOffset + xCenter + curve),
     i
   );
   ctx.closePath();
@@ -757,19 +786,29 @@ function drawRoad(i: number, textureCoord: number) {
 
   ctx.strokeStyle = index < MAX_TEX / 2 ? road1 : road2;
   ctx.beginPath();
-  ctx.moveTo(round(whiteLineWidth.x1 - xOffset + xCenter), i);
-  ctx.lineTo(round(whiteLineWidth.x2 - xOffset + xCenter), i);
+  ctx.moveTo(round(whiteLineWidth.x1 - xOffset + xCenter + curve), i);
+  ctx.lineTo(round(whiteLineWidth.x2 - xOffset + xCenter + curve), i);
   ctx.closePath();
   ctx.stroke();
 
   textureCoord %= MAX_TEX;
 }
 
+function curveOffsetForSprite(sprite: RoadSprite) {
+  let i = floor(sprite.i + sprite.dimensions * scaleForI(sprite.i));
+  i = clamp(i, height - 1, skyHeight + 1);
+
+  let curveOffset = curveOffsets[i - skyHeight];
+  return curveOffset;
+}
+
 function spriteOffset(sprite: RoadSprite) {
   const roadWidth = roadWidths[sprite.i];
+  let curveOffset = curveOffsetForSprite(sprite);
+
   return (
     roadWidth.x1 +
-    (roadWidth.x2 - roadWidth.x1) * sprite.roadPercent - xOffset + xCenter
+    (roadWidth.x2 - roadWidth.x1) * sprite.roadPercent - player.pos.x + curveOffset
   );
 }
 
@@ -899,7 +938,6 @@ function handlePlayerInput(turningSpeed: number) {
 
   player.pos.y += clamp(player.vel.y, MAX_NEGATIVE_VEL, MAX_POSITIVE_VEL);
   player.pos.x = clamp(player.pos.x, -PLAYER_EDGE, PLAYER_EDGE);
-  //xOffset = xCenter + player.pos.x;
 
   updatePlayerPos(player.pos.x, player.pos.y);
 }
@@ -1005,8 +1043,9 @@ function deactivateSprite(sprite: RoadSprite) {
 
 function activateSprite(sprite: RoadSprite) {
   sprite.active = true;
-  sprite.i = skyHeight - BIG_SPRITE_DIMENSIONS;
-  sprite.iCoord = sprite.i;
+  let i = round(skyHeight - sprite.dimensions * scaleForI(skyHeight));
+  sprite.i = i;
+  sprite.iCoord = i;
   sprite.roadPercent = random();
   sprite.alpha = 0;
 }
@@ -1129,7 +1168,7 @@ function drawWhiteHouse() {
 }
 
 function drawCity() {
-  const whOffset = xCenter - xOffset;
+  const whOffset = xCenter - xOffset + curveOffsets[1];
   drawImage(
     city1,
     ZERO_POS,
@@ -1198,8 +1237,6 @@ function resetRoadSprite(sprite: RoadSprite) {
   sprite.roadPercent = random();
   sprite.lastOnScreenAt = null;
   sprite.alpha = 1;
-  sprite.i = floor(skyHeight);
-  sprite.iCoord = skyHeight;
   sprite.active = false;
 }
 
@@ -1355,7 +1392,8 @@ function drawImage(
   dontScale = true,
   alpha = 1,
   srcXOffset = 0,
-  srcYOffset = 0
+  srcYOffset = 0,
+  debug = false
 ) {
   let scale = min(yOffset / height, 1) || 1;
   scale = dontScale ? 1 : scale;
@@ -1366,17 +1404,27 @@ function drawImage(
   const oldAlpha = ctx.globalAlpha;
 
   ctx.globalAlpha = alpha;
-  ctx.drawImage(
-    image,
-    srcXOffset,
-    srcYOffset,
-    dimensions,
-    dimensions,
-    round(xOffset + pos.x - xScaleOffset),
-    round(yOffset + pos.y + pos.z + yScaleOffset),
-    round(dimensions * scale),
-    round(dimensions * scale)
-  );
+  if (debug) {
+    ctx.fillStyle = "red";
+    ctx.fillRect(
+      round(xOffset + pos.x - xScaleOffset),
+      round(yOffset + pos.y + pos.z + yScaleOffset),
+      round(dimensions * scale),
+      round(dimensions * scale)
+    );
+  } else {
+    ctx.drawImage(
+      image,
+      srcXOffset,
+      srcYOffset,
+      dimensions,
+      dimensions,
+      round(xOffset + pos.x - xScaleOffset),
+      round(yOffset + pos.y + pos.z + yScaleOffset),
+      round(dimensions * scale),
+      round(dimensions * scale)
+    );
+  }
 
   ctx.globalAlpha = oldAlpha;
 }
@@ -1591,6 +1639,7 @@ interface RoadSprite {
   percentChanceOfSpawning: number;
   active: boolean;
   dimensions: number;
+  debug: boolean;
 }
 
 interface Vector {
@@ -1629,11 +1678,6 @@ interface GameVars {
   lastTimeDecrementedAt: number;
   lastFlashedInstructionsAt: number;
 }
-
-//interface RoadChunk {
-//pos: Vector;
-//i: number;
-//}
 
 interface RoadSegment {
   i: number;
@@ -1680,8 +1724,13 @@ function cosPalette(
   return apbcos;
 }
 
+function scaleForI(i: number) {
+  return min(i / height, 1);
+}
+
 function overlaps(sprite: RoadSprite) {
-  const scale = min(sprite.i / height, 1);
+  //const scale = min(sprite.i / height, 1);
+  const scale = scaleForI(sprite.i);
   const r2y = sprite.i + scale * sprite.dimensions;
 
   const past = r2y >= playerI;
@@ -1760,13 +1809,15 @@ function clearArray<T>(array: T[]) {
 
 // TODO:
 // add mouse controls back in
-// what to do with fun color
 // make it clearer when running out of time
-// time running out sound,
 // time running out visual indicator,
+// pan in instructions
+// time running out sound,
+// make sure you can see sprites soon enough
 // more intense funding running out visual indicator
+// trees
+// landing sound effect
+// what to do with fun color
 // add flash of color/text when pick up mail
 // add flash of color/text when pick up gold
-// landing sound effect
 // make truck a little red when it gets hit
-// hills
