@@ -25,6 +25,7 @@ import city2ImageData from "../assets/city2-big.png";
 import city3ImageData from "../assets/city3-big.png";
 import envelopeImageData from "../assets/envelope2.png";
 import cloudsImageData from "../assets/clouds-big.png";
+import treeImageData from "../assets/tree-big.png";
 
 const { random, floor, round, min, max, sin } = Math;
 
@@ -94,8 +95,12 @@ const MAILBOX_TIME_OFFSCREEN = 1;
 const INITIAL_WALLS = 2;
 const INTRO_TIME = 2;
 const GAME_START_DELAY = 18;
-const CURVE_AMPLITUDE = .0015;
-const CURVE_FREQUENCY = 100;
+//const CURVE_AMPLITUDE = .0017;
+const CURVE_AMPLITUDE = .0027;
+const CURVE_FREQUENCY = 10;
+const NUM_TREES = 30;
+const TREE_CHANCE_SPAWN = .05;
+const TREE_TIME_OFFSCREEN = 1;
 
 let dx = 0;
 let ddx = 0;
@@ -153,6 +158,9 @@ envelopeImage.src = envelopeImageData;
 const cloudsImage = new Image();
 cloudsImage.src = cloudsImageData;
 
+const treeImage = new Image();
+treeImage.src = treeImageData;
+
 const wh1 = new Image();
 const wh2 = new Image();
 const wh3 = new Image();
@@ -204,19 +212,22 @@ for (let i = 0; i < floor(height - skyHeight); i++) {
   curveOffsets[i] = 0;
 }
 
-const roadSegments: RoadSegment[] = range(zMap.length * 4).map((i) => {
+const roadSegments: RoadSegment[] = range(zMap.length * 1).map((i) => {
   return {
+    id: i,
     i: i % zMap.length,
     dx: dxForI(i),
   };
 });
 
 let movingSegment: RoadSegment = {
+  id: roadSegments[0].i,
   i: roadSegments[0].i,
   dx: roadSegments[0].dx,
 };
 
 let bottomSegment: RoadSegment = {
+  id: roadSegments[zMap.length - 1].i,
   i: roadSegments[zMap.length - 1].i,
   dx: roadSegments[zMap.length - 1].dx,
 };
@@ -350,6 +361,30 @@ const truckSparks: Sprite[] = range(TRUCK_SPARKS * 20).map(() => {
     animatedAt: 0,
     frame: 0,
     dimensions: TRUCK_SPARKS_DIMENSIONS
+  };
+});
+
+const trees: RoadSprite[] = range(NUM_TREES).map(() => {
+  const i = randomIntBetween(skyHeight, height);
+  return {
+    image: treeImage,
+    pos: {
+      x: randomIntBetween(-width, -ROAD_SPRITE_SPAWN_X),
+      y: 0,
+      z: 0
+    },
+    rect: { x: -1, y: -1, width: -1, height: -1 },
+    i: i,
+    iCoord: i,
+    alpha: 1,
+    name: "tree",
+    percentChanceOfSpawning: TREE_CHANCE_SPAWN,
+    minTimeOffScreen: TREE_TIME_OFFSCREEN,
+    lastOnScreenAt: null,
+    roadPercent: random(),
+    active: random() > .5 ? true : false,
+    dimensions: BIG_SPRITE_DIMENSIONS,
+    debug: false
   };
 });
 
@@ -606,9 +641,9 @@ function drawInstructions() {
 }
 
 
-function advanceRoadSprites() {
+function advanceRoadSprites(sprites: RoadSprite[]) {
   if (gameVars.timeLeft >= START_TIME) return;
-  roadSprites.forEach(sprite => {
+  sprites.forEach(sprite => {
     const increase = spriteIncrease;
     sprite.iCoord = clamp(
       sprite.iCoord + increase,
@@ -619,22 +654,8 @@ function advanceRoadSprites() {
   });
 }
 
-/*
-function advanceRoadSprites() {
-  if (gameVars.timeLeft >= START_TIME) return;
-  roadSprites.forEach(sprite => {
-    const increase = spriteIncrease;
-    sprite.iCoord = clamp(
-      sprite.iCoord + increase,
-      skyHeight - sprite.dimensions * 1.5,
-      height - 1
-    );
-    sprite.i = round(sprite.iCoord);
-  });
-}
-*/
 function dxForI(i: number) {
-  return CURVE_AMPLITUDE * sin(i * CURVE_FREQUENCY);
+  return CURVE_AMPLITUDE * sin(CURVE_FREQUENCY * i);
 }
 
 function runGame(t: number) {
@@ -645,7 +666,7 @@ function runGame(t: number) {
     if (gameVars.readyToRestart && isButtonPressed()) restartGame();
   } else {
     handlePlayerInput(turningSpeed);
-    advanceRoadSprites();
+    advanceRoadSprites(roadSprites);
     addWall();
   }
 
@@ -671,7 +692,7 @@ function runGame(t: number) {
       dx = movingSegment.dx;
     }
 
-    ddx += dx;
+    ddx += dx
     curveOffsets[i - skyHeight] += ddx;
 
     drawRoad(i, textureCoord);
@@ -683,12 +704,17 @@ function runGame(t: number) {
     bottomSegment.i = movingSegment.i;
 
     movingSegment.i = zMap.length - 1;
-    const segmentIndex = randomIntBetween(0, roadSegments.length - 1);
+    //const segmentIndex = randomIntBetween(0, roadSegments.length - 1);
+    const movingSegmentIndex = roadSegments.indexOf(roadSegments.find(segment => segment.id === movingSegment.id));
+    let segmentIndex = roadSegments.length - 1;
+    if (movingSegmentIndex < roadSegments.length - 1) segmentIndex = movingSegmentIndex + 1;
+
     movingSegment.dx = roadSegments[segmentIndex].dx;
-    curveOffsets.pop();
+    movingSegment.id = roadSegments[segmentIndex].id;
   }
 
   drawRoadSprites();
+  drawTrees();
   drawUi();
   drawWallParticles();
   drawEnvelopes();
@@ -719,7 +745,6 @@ function drawRoadSprites() {
     }
 
     if (sprite.alpha < 1) sprite.alpha += ALPHA_INCREASE_AMOUNT;
-
     if (overlaps(sprite) && !gameVars.gameOver) handleOverlap(sprite);
 
     drawImage(
@@ -739,6 +764,12 @@ function drawRoadSprites() {
   });
 }
 
+function roadWidthForI(i: number) {
+  const totalPercent = i / height;
+  const currentRoadWidth = MAX_ROAD_WIDTH * totalPercent;
+  return currentRoadWidth;
+}
+
 function drawRoad(i: number, textureCoord: number) {
   const zWorld = zMap[i];
   const index = (textureCoord + gameTime + zWorld) % MAX_TEX;
@@ -746,9 +777,10 @@ function drawRoad(i: number, textureCoord: number) {
   const whiteLineWidth = whiteLineWidths[i];
   const roadWidth = roadWidths[i];
   const percent = max(i / groundHeight, 0.3);
-  const totalPercent = i / height;
+  //const totalPercent = i / height;
   const curve = curveOffsets[i - skyHeight];
-  const currentRoadWidth = MAX_ROAD_WIDTH * totalPercent;
+  //const currentRoadWidth = MAX_ROAD_WIDTH * totalPercent;
+  const currentRoadWidth = roadWidthForI(i);
   ctx.strokeStyle = index < MAX_TEX / 2 ? grass1 : grass2;
   ctx.beginPath();
   ctx.moveTo(round(0), i);
@@ -1043,7 +1075,7 @@ function deactivateSprite(sprite: RoadSprite) {
 
 function activateSprite(sprite: RoadSprite) {
   sprite.active = true;
-  let i = round(skyHeight - sprite.dimensions * scaleForI(skyHeight));
+  let i = round(skyHeight - 1.2 * sprite.dimensions * scaleForI(skyHeight));
   sprite.i = i;
   sprite.iCoord = i;
   sprite.roadPercent = random();
@@ -1168,7 +1200,7 @@ function drawWhiteHouse() {
 }
 
 function drawCity() {
-  const whOffset = xCenter - xOffset + curveOffsets[1];
+  const whOffset = xCenter - xOffset;// + curveOffsets[1];
   drawImage(
     city1,
     ZERO_POS,
@@ -1229,8 +1261,9 @@ function addWall() {
 }
 
 function resetRoadSprite(sprite: RoadSprite) {
+  let x = randomIntBetween(-ROAD_SPRITE_SPAWN_X, ROAD_SPRITE_SPAWN_X);
   sprite.pos = {
-    x: randomIntBetween(-ROAD_SPRITE_SPAWN_X, ROAD_SPRITE_SPAWN_X),
+    x,
     y: 0,
     z: 0
   };
@@ -1337,6 +1370,40 @@ function drawGolds() {
     });
 }
 
+// Copy pasted from drawRoadSprite :grimace:
+function drawTrees() {
+  if (gameVars.timeLeft >= START_TIME) return;
+  advanceRoadSprites(trees);
+  trees.forEach(sprite => {
+    if (sprite.i === -1) return;
+    if (!sprite.active && !gameVars.gameOver) {
+      if (!spriteReadyToBeOnScreen(sprite)) return;
+      if (!isLucky(sprite.percentChanceOfSpawning)) return;
+      activateSprite(sprite);
+    }
+
+    if (sprite.alpha < 1) sprite.alpha += ALPHA_INCREASE_AMOUNT;
+
+    const sign = sprite.roadPercent > .5 ? 1 : -1;
+
+    drawImage(
+      sprite.image,
+      ZERO_POS,
+      spriteOffset(sprite) + roadWidthForI(sprite.i) * sign,
+      sprite.i,
+      sprite.dimensions,
+      false,
+      sprite.alpha,
+      0,
+      0,
+      sprite.debug
+    );
+
+    if (sprite.i > zMap.length - 2) deactivateSprite(sprite);
+  });
+}
+
+
 function drawClouds() {
   clouds
     .filter(sprite => sprite.active)
@@ -1405,13 +1472,13 @@ function drawImage(
 
   ctx.globalAlpha = alpha;
   if (debug) {
-    ctx.fillStyle = "red";
-    ctx.fillRect(
-      round(xOffset + pos.x - xScaleOffset),
-      round(yOffset + pos.y + pos.z + yScaleOffset),
-      round(dimensions * scale),
-      round(dimensions * scale)
-    );
+/*    ctx.fillStyle = "red";*/
+    //ctx.fillRect(
+      //round(xOffset + pos.x - xScaleOffset),
+      //round(yOffset + pos.y + pos.z + yScaleOffset),
+      //round(dimensions * scale),
+      //round(dimensions * scale)
+    /*);*/
   } else {
     ctx.drawImage(
       image,
@@ -1680,50 +1747,10 @@ interface GameVars {
 }
 
 interface RoadSegment {
+  id: number;
   i: number;
   dx: number;
 }
-
-// https://www.iquilezles.org/www/articles/palettes/palettes.htm
-const cpa = { x: 0.3, y: 0.3, z: 0.3 };
-const cpb = { x: 0.5, y: 0.3, z: 3 };
-const cpc = { x: 0.5, y: 1.0, z: 0 };
-const cpd = { x: 0.4, y: 0.9, z: 0.2 };
-
-function funColor(t: number): string {
-  const color = cosPalette(t, cpa, cpb, cpc, cpd);
-
-  color.x *= 256;
-  color.y *= 256;
-  color.z *= 256;
-
-  return `rgb(${color.x}, ${color.y}, ${color.z})`;
-}
-
-function cosPalette(
-  t: number,
-  a: Vector,
-  b: Vector,
-  c: Vector,
-  d: Vector
-): Vector {
-  const tc: Vector = { x: t * c.x, y: t * c.y, z: t * c.z };
-  const six: number = 6.28318;
-  const { cos } = Math;
-  const cosctpd6: Vector = {
-    x: cos((tc.x + d.x) * six),
-    y: cos((tc.y + d.y) * six),
-    z: cos((tc.z + d.z) * six)
-  };
-  const apbcos: Vector = {
-    x: a.x + b.x * cosctpd6.x,
-    y: a.y + b.y * cosctpd6.y,
-    z: a.z + b.z * cosctpd6.z
-  };
-
-  return apbcos;
-}
-
 function scaleForI(i: number) {
   return min(i / height, 1);
 }
@@ -1816,6 +1843,7 @@ function clearArray<T>(array: T[]) {
 // make sure you can see sprites soon enough
 // more intense funding running out visual indicator
 // trees
+// overlapping audio
 // landing sound effect
 // what to do with fun color
 // add flash of color/text when pick up mail
