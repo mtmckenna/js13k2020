@@ -66,13 +66,13 @@ export const playNoFunds = () =>
   createSound([250, 200, 150, 100], [0.4, 0.4, .4, 2.5], TRIANGLE);
 
 // https://blog.j-labs.pl/2017/02/Creating-game-for-android-using-JavaScript-4-Sounds-Web-Audio-Api
-function createSound(notes: number[], times: number[], type: OscillatorType) {
+function createSound(notes: number[], times: number[], type: OscillatorType): Sound {
   const noteGain = audioContext.createGain();
   noteGain.connect(gain);
 
   let sound: Sound = {
     oscillatorNodes: [],
-    gainNode: noteGain
+    gainNode: noteGain,
   };
 
   let oscillators: OscillatorNode[] = [];
@@ -88,6 +88,7 @@ function createSound(notes: number[], times: number[], type: OscillatorType) {
   sound.oscillatorNodes = oscillators;
 
   playNote(0, sound, times);
+  return sound;
 }
 
 
@@ -174,7 +175,7 @@ export function engineAlreadyStarted() {
   return enginesStarted;
 }
 
-interface Sound {
+export interface Sound {
   oscillatorNodes: OscillatorNode[];
   gainNode: GainNode;
 }

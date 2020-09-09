@@ -3,6 +3,7 @@ import "./index.css";
 import { drawText } from "./font";
 
 import {
+  Sound,
   engineAlreadyStarted,
   startEngines,
   playHitWall,
@@ -110,6 +111,7 @@ let gameOverText = "";
 let ballotText = "";
 let instructionsAlpha = 1.0;
 let restartTimeout: number = null;
+let gameOverElectionDaySong: Sound = null;
 
 let gameVars: GameVars = {
   started: false,
@@ -533,6 +535,7 @@ function isButtonPressed() {
 function runTitleScreen() {
   if (isButtonPressed()) {
     if (!engineAlreadyStarted()) startEngines();
+
     playElectionDay();
     gameVars.startedAt = gameTime;
     gameVars.started = true;
@@ -854,6 +857,11 @@ function spriteOffset(sprite: RoadSprite) {
 
 function restartGame() {
   playElectionDay();
+  // Stop playing the song from the previous game over
+  if (gameOverElectionDaySong) {
+    gameOverElectionDaySong.oscillatorNodes.forEach(node => node.disconnect());
+    gameOverElectionDaySong = null;
+  }
   gameVars.gameOver = false;
   gameVars = {
     started: true,
@@ -939,7 +947,7 @@ function gameOverTimeZero() {
   gameOverText = GAME_OVER_TIME_TEXT;
   ballotText = `YOU GOT ${gameVars.ballots} BALLOTS!`;
   if (!gameVars.playedGameOverSound) {
-    playElectionDay();
+    gameOverElectionDaySong = playElectionDay();
     gameVars.playedGameOverSound = true;
   }
   gameOver();
@@ -1851,7 +1859,6 @@ function clearArray<T>(array: T[]) {
 // make sure you can see sprites soon enough
 // more intense funding running out visual indicator
 // trees
-// overlapping audio
 // landing sound effect
 // add flash of color/text when pick up mail
 // add flash of color/text when pick up gold
