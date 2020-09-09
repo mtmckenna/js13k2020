@@ -103,7 +103,7 @@ function playNote(index: number, sound: Sound, times: number[]) {
     gainNode.gain.setValueAtTime(EPSILON, startTime);
     o.start(startTime);
     gainNode.gain.setTargetAtTime(1, startTime + EPSILON, AUDIO_TIME_CONSTANT);
-    gainNode.gain.setTargetAtTime(0, endTime, AUDIO_TIME_CONSTANT);
+    gainNode.gain.setTargetAtTime(EPSILON, endTime, AUDIO_TIME_CONSTANT);
     o.stop(endTime + RAMP_TIME);
   }
 }
@@ -130,13 +130,13 @@ export function playGroundEngine() {
   groundEngine.gainNode.gain.setValueAtTime(groundEngine.gainNode.gain.value, t);
   groundEngine.gainNode.gain.setTargetAtTime(MAX_ENGINE, t, AUDIO_TIME_CONSTANT);
   airEngine.gainNode.gain.setValueAtTime(airEngine.gainNode.gain.value, t);
-  airEngine.gainNode.gain.setTargetAtTime(0, t, AUDIO_TIME_CONSTANT);
+  airEngine.gainNode.gain.setTargetAtTime(EPSILON, t, AUDIO_TIME_CONSTANT);
 }
 
 export function playAirEngine() {
   const t =  audioContext.currentTime;
   groundEngine.gainNode.gain.setValueAtTime(groundEngine.gainNode.gain.value, t);
-  groundEngine.gainNode.gain.setTargetAtTime(0, t, AUDIO_TIME_CONSTANT);
+  groundEngine.gainNode.gain.setTargetAtTime(EPSILON, t, AUDIO_TIME_CONSTANT);
   airEngine.gainNode.gain.setValueAtTime(airEngine.gainNode.gain.value, t);
   airEngine.gainNode.gain.setTargetAtTime(MAX_ENGINE, t, AUDIO_TIME_CONSTANT);
 }
@@ -164,8 +164,8 @@ export function quietAllEngines() {
 
 export function startEngines() {
   if (enginesStarted) return;
-  airEngine.gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-  groundEngine.gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+  airEngine.gainNode.gain.setValueAtTime(EPSILON, audioContext.currentTime);
+  groundEngine.gainNode.gain.setValueAtTime(EPSILON, audioContext.currentTime);
   airEngine.oscillatorNodes.forEach(node => node.start());
   groundEngine.oscillatorNodes.forEach(node => node.start());
   enginesStarted = true;
