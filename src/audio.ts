@@ -79,7 +79,7 @@ function createSound(notes: number[], times: number[], type: OscillatorType) {
   notes.forEach((note, index) => {
     let oscillator = audioContext.createOscillator();
     oscillator.connect(noteGain);
-    oscillator.type = type || triangle;
+    oscillator.type = type || TRIANGLE;
     oscillator.frequency.value = note;
     oscillator.onended = () => playNote(index + 1, sound, times);
     oscillators.push(oscillator);
