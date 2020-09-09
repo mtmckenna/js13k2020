@@ -94,6 +94,7 @@ const START_FUNDING = 100;
 const TOUCH_TIME = 300;
 const SHADOW_COLOR = "#EEE";
 const SPARK_COLOR = "#fc9003";
+const BLACK = "#000";
 const MAILBOX_CHANCE_SPAWN = 0.02;
 const MAILBOX_TIME_OFFSCREEN = 1;
 const INITIAL_WALLS = 2;
@@ -595,7 +596,7 @@ function runTitleScreen() {
     8 * UI_PADDING,
     UI_PADDING * 40,
     FONT_SIZE,
-    "#000",
+    BLACK,
     SHADOW_COLOR,
     instructionsAlpha
   );
@@ -605,7 +606,7 @@ function runTitleScreen() {
     24 * UI_PADDING,
     UI_PADDING * 40 + SECOND_ROW_Y,
     FONT_SIZE,
-    "#000",
+    BLACK,
     SHADOW_COLOR,
     instructionsAlpha
   );
@@ -915,7 +916,7 @@ function gameOver() {
       8 * UI_PADDING,
       UI_PADDING * 40,
       FONT_SIZE,
-      "#000",
+      BLACK,
       SHADOW_COLOR,
       instructionsAlpha
     );
@@ -927,7 +928,7 @@ function gameOver() {
       12 * UI_PADDING,
       UI_PADDING * 40 + SECOND_ROW_Y,
       FONT_SIZE,
-      "#000",
+      BLACK,
       SHADOW_COLOR,
       instructionsAlpha
     );
@@ -1252,12 +1253,15 @@ function drawUi() {
     UI_PADDING + introOffset,
     FONT_SIZE
   );
+
+  const timeColor = gameVars.timeLeft > 10 ? BLACK : SPARK_COLOR;
   drawText(
     canvas,
     pad(gameVars.timeLeft),
     width - 3 * (FONT_SIZE * 0.8),
     UI_PADDING + introOffset,
-    FONT_SIZE
+    FONT_SIZE,
+    timeColor
   );
   drawFundingMeter();
 }
@@ -1854,10 +1858,7 @@ function clearArray<T>(array: T[]) {
 
 // TODO:
 // add mouse controls back in
-// make it clearer when running out of time
-// time running out visual indicator,
 // pan in instructions
-// make sure you can see sprites soon enough
 // more intense funding running out visual indicator
 // landing sound effect
 // add flash of color/text when pick up mail
