@@ -280,46 +280,46 @@ const letters = {
 
 const FONT_UNIT_HEIGHT = 5;
 export function drawText(canvas: HTMLCanvasElement, string: string, startX: number = 0, startY: number = 0, pixelHeight: number = 1, color: string = "#000", bgColor = "#CCC", alpha = 1.0) {
-	const size = pixelHeight / FONT_UNIT_HEIGHT;
-	const context = canvas.getContext("2d");
+  const size = pixelHeight / FONT_UNIT_HEIGHT;
+  const context = canvas.getContext("2d");
   const oldAlpha = context.globalAlpha;
   context.globalAlpha = alpha;
 
-	var needed = [];
-	string = string.toUpperCase(); // because I only did uppercase letters
-	for (var i = 0; i < string.length; i++) {
-		var letter = letters[string.charAt(i)];
-		if (letter) {
-			// because there's letters I didn't do
-			needed.push(letter);
-		}
-	}
+  var needed = [];
+  string = string.toUpperCase(); // because I only did uppercase letters
+  for (var i = 0; i < string.length; i++) {
+    var letter = letters[string.charAt(i)];
+    if (letter) {
+      // because there's letters I didn't do
+      needed.push(letter);
+    }
+  }
 
-	var currX = 0;
-	for (i = 0; i < needed.length; i++) {
-		letter = needed[i];
-		var currY = 0;
-		var addX = 0;
-		for (var y = 0; y < letter.length; y++) {
-			var row = letter[y];
-			for (var x = 0; x < row.length; x++) {
-				if (row[x]) {
+  var currX = 0;
+  for (i = 0; i < needed.length; i++) {
+    letter = needed[i];
+    var currY = 0;
+    var addX = 0;
+    for (var y = 0; y < letter.length; y++) {
+      var row = letter[y];
+      for (var x = 0; x < row.length; x++) {
+        if (row[x]) {
           const x1 = floor(startX + currX + x * size);
           const y1 = floor(startY + currY);
           const x2 = floor(startX + currX + x * size + 1);
           const y2 = floor(startY + currY + 1);
 
-	        context.fillStyle = bgColor;
-					context.fillRect(x2, y2, size, size);
-	        context.fillStyle = color;
-					context.fillRect(x1, y1, size, size);
-				}
-			}
-			addX = Math.max(addX, row.length * size);
-			currY += size;
-		}
-		currX += size + addX;
-	}
+          context.fillStyle = bgColor;
+          context.fillRect(x2, y2, size, size);
+          context.fillStyle = color;
+          context.fillRect(x1, y1, size, size);
+        }
+      }
+      addX = Math.max(addX, row.length * size);
+      currY += size;
+    }
+    currX += size + addX;
+  }
 
   context.globalAlpha = oldAlpha;
 }
