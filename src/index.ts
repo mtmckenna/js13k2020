@@ -1616,17 +1616,17 @@ window.addEventListener("keyup", (e: KeyboardEvent) => {
   }
 });
 
-window.addEventListener("touchstart", (e: TouchEvent) => {
+function pointerDown(pointerX: number) {
   pointerState.down = true;
   pointerState.downAt = realTime;
   pointerState.upAt = null;
-  const xPercentage = e.touches[0].clientX / window.innerWidth;
+  const xPercentage = pointerX / window.innerWidth;
   const x = width * xPercentage;
   pointerState.x = x;
   pointerState.playerX = player.pos.x;
-});
+}
 
-window.addEventListener("touchend", () => {
+function pointerUp() {
   pointerState.down = false;
   if (realTime - pointerState.downAt < TOUCH_TIME) {
     jump();
@@ -1635,40 +1635,45 @@ window.addEventListener("touchend", () => {
 
   startEngines();
   pointerState.downAt = null;
-});
+}
 
-window.addEventListener("mousedown", () => {
-  pointerState.down = true;
-  pointerState.downAt = realTime;
-});
-
-window.addEventListener("mousemove", (e: MouseEvent) => {
-  if (!pointerState.down) return;
-  const xPercentage = e.offsetX / window.innerWidth;
-  const x = width * xPercentage;
-  //player.pos.x = x;
-});
-
-window.addEventListener("touchmove", (e: TouchEvent) => {
-  const xPercentage = e.touches[0].clientX / window.innerWidth;
+function pointerMove(pointerX: number) {
+  const xPercentage = pointerX / window.innerWidth;
   const x = width * xPercentage;
 
   const diff = x - pointerState.x;
 
   if (gameVars.gameOver) return;
   player.pos.x = pointerState.playerX + diff;
+}
+
+
+window.addEventListener("touchstart", (e: TouchEvent) => {
+  pointerDown(e.touches[0].clientX);
+});
+
+window.addEventListener("touchend", () => {
+  pointerUp();
+});
+
+window.addEventListener("mousedown", (e: MouseEvent) => {
+  pointerDown(e.clientX);
+});
+
+window.addEventListener("mousemove", (e: MouseEvent) => {
+  if (!pointerState.down) return;
+  pointerMove(e.clientX);
+});
+
+window.addEventListener("touchmove", (e: TouchEvent) => {
+  pointerMove(e.touches[0].clientX);
 });
 
 window.addEventListener("mouseup", () => {
-  pointerState.down = false;
-});
-
-window.addEventListener("click", () => {
-  //jump();
+  pointerUp();
 });
 
 window.addEventListener("resize", resize);
-
 window.addEventListener("load", load);
 
 function addFavicon() {
@@ -1857,10 +1862,8 @@ function clearArray<T>(array: T[]) {
 }
 
 // TODO:
-// add mouse controls back in
 // pan in instructions
 // more intense funding running out visual indicator
-// landing sound effect
 // add flash of color/text when pick up mail
 // add flash of color/text when pick up gold
 // make truck a little red when it gets hit
