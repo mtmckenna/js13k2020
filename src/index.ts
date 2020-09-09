@@ -106,6 +106,7 @@ const NUM_TREES = 30;
 const TREE_CHANCE_SPAWN = 0.05;
 const TREE_TIME_OFFSCREEN = 1;
 const SPRITE_HORIZON_OFFSET = 12;
+const MAX_FPS = 1 / 60 * 1000;
 
 let dx = 0;
 let ddx = 0;
@@ -203,6 +204,7 @@ let skyHeight = height * (1.0 - GROUND_PERCENT);
 let groundHeight = floor(height * GROUND_PERCENT);
 let roadStartX = (width - width * ROAD_WIDTH_PERCENT) / 2;
 let realTime = null;
+let lastFrameAt = null;
 let gameTime = 0;
 let gameTimeAbsolute = 0;
 
@@ -500,15 +502,13 @@ const SLOW_MULTIPLIER = 4;
 const normalTime = 70;
 const SIDE_SPRITE_INCREASE = 1.4;
 const slowTime = normalTime * SLOW_MULTIPLIER;
+const boundGameLoop = gameLoop(MAX_FPS, insideTick, this);
 let turningSpeed = TURNING_SPEED;
 let spriteIncrease = SIDE_SPRITE_INCREASE;
 let xOffset = 0;
 let graceMultiplier = 1;
 
-function tick(t: number) {
-  ctx.globalAlpha = 1.0;
-  requestAnimationFrame(tick);
-
+function insideTick(t: number) {
   const divisor = inGracePeriod() ? slowTime : normalTime;
   gameTime += 10 / divisor;
   gameTimeAbsolute += 10 / normalTime;
@@ -527,6 +527,13 @@ function tick(t: number) {
     gameVars.lastFlashedInstructionsAt = gameTime;
     instructionsAlpha = instructionsAlpha === 1.0 ? 0.0 : 1.0;
   }
+}
+
+function tick(t: number) {
+  realTime = t;
+  ctx.globalAlpha = 1.0;
+  requestAnimationFrame(tick);
+  boundGameLoop(t);
 }
 
 function isButtonPressed() {
@@ -668,7 +675,6 @@ function dxForI(i: number) {
 
 function runGame(t: number) {
   if (readyToDecrementTime()) updateTimeLeft();
-  realTime = t;
   const { timeLeft } = gameVars;
 
   if (gameVars.gameOver) {
@@ -1932,6 +1938,21 @@ function clearArray<T>(array: T[]) {
   }
 }
 
+function gameLoop(frameRate: number, gameLogicFunction: (timestamp: number) => void, context: any) {
+  let lag = 0;
+  let previousTimestamp = 0;
+
+  return (timestamp: number) => {
+    lag += Math.min(timestamp - previousTimestamp, frameRate);
+    previousTimestamp = timestamp;
+
+    while (lag >= frameRate) {
+      gameLogicFunction.call(context, timestamp);
+      lag -= frameRate;
+    }
+  };
+}
+
 // TODO:
 // more intense funding running out visual indicator
 // add flash of color/text when pick up mail
@@ -1940,3 +1961,4 @@ function clearArray<T>(array: T[]) {
 // go even faster if you win
 // local storage
 // stop counting down if you lose
+// fps
