@@ -104,6 +104,7 @@ const CURVE_FREQUENCY = 10;
 const NUM_TREES = 30;
 const TREE_CHANCE_SPAWN = .05;
 const TREE_TIME_OFFSCREEN = 1;
+const SPRITE_HORIZON_OFFSET = 12;
 
 let dx = 0;
 let ddx = 0;
@@ -651,7 +652,7 @@ function advanceRoadSprites(sprites: RoadSprite[]) {
     const increase = spriteIncrease;
     sprite.iCoord = clamp(
       sprite.iCoord + increase,
-      skyHeight - sprite.dimensions * scaleForI(skyHeight),
+      skyHeight - sprite.dimensions * scaleForI(skyHeight) - SPRITE_HORIZON_OFFSET,
       height - 1
     );
     sprite.i = round(sprite.iCoord);
@@ -1092,7 +1093,7 @@ function deactivateSprite(sprite: RoadSprite) {
 
 function activateSprite(sprite: RoadSprite) {
   sprite.active = true;
-  let i = round(skyHeight - 1.2 * sprite.dimensions * scaleForI(skyHeight));
+  let i = round(skyHeight - sprite.dimensions * scaleForI(skyHeight)) - SPRITE_HORIZON_OFFSET;
   sprite.i = i;
   sprite.iCoord = i;
   sprite.roadPercent = random();
@@ -1858,9 +1859,9 @@ function clearArray<T>(array: T[]) {
 // pan in instructions
 // make sure you can see sprites soon enough
 // more intense funding running out visual indicator
-// trees
 // landing sound effect
 // add flash of color/text when pick up mail
 // add flash of color/text when pick up gold
 // make truck a little red when it gets hit
-// width
+// go even faster if you win
+// local storage
