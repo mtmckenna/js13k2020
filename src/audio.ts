@@ -2,6 +2,7 @@ const EPSILON = 0.0001;
 const RAMP_TIME = 0.1;
 const AUDIO_TIME_CONSTANT = .01;
 const MAX_ENGINE = 0.2;
+const TRIANGLE = "triangle";
 
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -17,15 +18,28 @@ const groundEngineHz = [50, 70];
 const airEngineHz = [80, 100];
 const groundEngine = createEngine(groundEngineHz);
 const airEngine = createEngine(airEngineHz);
-const triangle = "triangle";
 
 let enginesStarted = false;
 export const playHitWall = () =>
-  createSound([120, 100], [0.2, 0.4], triangle);
+  createSound([120, 100], [0.2, 0.4], TRIANGLE);
 export const playHitMailbox = () =>
-  createSound([200, 220], [0.2, 0.3], triangle);
+  createSound([200, 220], [0.2, 0.3], TRIANGLE);
 export const playHitGold = () =>
-  createSound([250, 250], [0.2, 0.3], triangle);
+  createSound([250, 250], [0.2, 0.3], TRIANGLE);
+
+const p0 = () => createSound([0], [0.1], TRIANGLE);
+const p1 = () => createSound([500], [0.3], TRIANGLE);
+const p2 = () => createSound([475], [0.2], TRIANGLE);
+const p3 = () => createSound([450], [0.1], TRIANGLE);
+const p4 = () => createSound([425], [0.1], TRIANGLE);
+const p5 = () => createSound([400], [0.1], TRIANGLE);
+const p6 = () => createSound([375], [0.1], TRIANGLE);
+const p7 = () => createSound([350], [0.1], TRIANGLE);
+const p8 = () => createSound([325], [0.1], TRIANGLE);
+const p9 = () => createSound([300], [0.1], TRIANGLE);
+const p10 = () => createSound([275], [0.1], TRIANGLE);
+
+export const countdownBeeps = [p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10];
 
 const Al = 233.08;
 const Bf = 246.94;
@@ -46,10 +60,10 @@ const battleNotes   = [ C,  Bf,  Al,   C,   F,   G,   A,  F,  R,   D,   E,   F, 
 const notesDuration = [.4,  .1,  .1,  .1,  .1,  .1,  .4, .2, .03, .2,  .1,  .1,  .1,  .1,  .1,  .4,  .2,  .03, .1,  .1,  .1, .1, .1, .1,  .1,  .1,  .1, .2, .2,  .2,  .2,  .2,  .2];
 
 export const playElectionDay = () =>
-  createSound(battleNotes, notesDuration, triangle);
+  createSound(battleNotes, notesDuration, TRIANGLE);
 
 export const playNoFunds = () =>
-  createSound([250, 200, 150, 100], [0.4, 0.4, .4, 2.5], triangle);
+  createSound([250, 200, 150, 100], [0.4, 0.4, .4, 2.5], TRIANGLE);
 
 // https://blog.j-labs.pl/2017/02/Creating-game-for-android-using-JavaScript-4-Sounds-Web-Audio-Api
 function createSound(notes: number[], times: number[], type: OscillatorType) {
@@ -98,7 +112,7 @@ function createEngine(frequencies: number[]): Sound {
   engineGain.connect(gain);
   const oscillatorNodes = frequencies.map(hz => {
     const oscillator = audioContext.createOscillator();
-    oscillator.type = triangle;
+    oscillator.type = TRIANGLE;
     oscillator.frequency.value = hz;
     oscillator.connect(engineGain);
     return oscillator;

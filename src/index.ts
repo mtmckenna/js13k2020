@@ -12,7 +12,8 @@ import {
   playGroundEngine,
   quietAllEngines,
   playElectionDay,
-  playNoFunds
+  playNoFunds,
+  countdownBeeps
 } from "./audio";
 
 import carImageData from "../assets/mailtruck-sheet-big.png";
@@ -115,6 +116,7 @@ let gameVars: GameVars = {
   funding: START_FUNDING,
   timeLeft: START_TIME,
   ballots: 0,
+  countdownBeepsPlayed: [],
   gameOver: false,
   readyToRestart: false,
   playedGameOverSound: false,
@@ -660,6 +662,7 @@ function dxForI(i: number) {
 function runGame(t: number) {
   if (readyToDecrementTime()) updateTimeLeft();
   realTime = t;
+  const { timeLeft } = gameVars;
 
   if (gameVars.gameOver) {
     if (gameVars.readyToRestart && isButtonPressed()) restartGame();
@@ -667,6 +670,14 @@ function runGame(t: number) {
     handlePlayerInput(turningSpeed);
     advanceRoadSprites(roadSprites);
     addWall();
+  }
+
+  if (timeLeft <= 10) {
+    if (!gameVars.countdownBeepsPlayed.includes(timeLeft)) {
+      gameVars.countdownBeepsPlayed.push(timeLeft);
+      const sound = countdownBeeps[timeLeft];
+      if (sound) sound();
+    }
   }
 
   drawSky();
@@ -852,6 +863,7 @@ function restartGame() {
     gameOver: false,
     playedGameOverSound: false,
     readyToRestart: false,
+    countdownBeepsPlayed: [],
     startedAt: gameTime,
     lastHitAt: null,
     lastFlashedAt: null,
@@ -1733,6 +1745,7 @@ interface GameVars {
   gameOver: boolean;
   readyToRestart: boolean;
   playedGameOverSound: boolean;
+  countdownBeepsPlayed: number[];
   ballots: number;
   funding: number;
   startedAt: number;
@@ -1835,7 +1848,6 @@ function clearArray<T>(array: T[]) {
 // make it clearer when running out of time
 // time running out visual indicator,
 // pan in instructions
-// time running out sound,
 // make sure you can see sprites soon enough
 // more intense funding running out visual indicator
 // trees

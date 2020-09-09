@@ -16,7 +16,7 @@ module.exports = merge(common, {
   },
   plugins: [
     new InlineChunkHtmlPlugin(HtmlWebpackPlugin, [".js"]),
-    new HTMLInlineCSSWebpackPlugin()
+    new HTMLInlineCSSWebpackPlugin(),
     //new BundleAnalyzerPlugin({analyzerMode: "static"})
   ]
 });
