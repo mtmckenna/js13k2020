@@ -95,7 +95,6 @@ const MAILBOX_TIME_OFFSCREEN = 1;
 const INITIAL_WALLS = 2;
 const INTRO_TIME = 2;
 const GAME_START_DELAY = 18;
-//const CURVE_AMPLITUDE = .0017;
 const CURVE_AMPLITUDE = .002;
 const CURVE_FREQUENCY = 10;
 const NUM_TREES = 30;
@@ -703,8 +702,8 @@ function runGame(t: number) {
 
     movingSegment.i = zMap.length - 1;
     const movingSegmentIndex = roadSegments.indexOf(roadSegments.find(segment => segment.id === movingSegment.id));
-    let segmentIndex = roadSegments.length - 1;
-    if (movingSegmentIndex < roadSegments.length - 1) segmentIndex = movingSegmentIndex + 1;
+    let segmentIndex = movingSegmentIndex + 1;
+    if (segmentIndex > roadSegments.length - 1) segmentIndex = 0;
 
     movingSegment.dx = roadSegments[segmentIndex].dx;
     movingSegment.id = roadSegments[segmentIndex].id;
@@ -774,9 +773,8 @@ function drawRoad(i: number, textureCoord: number) {
   const whiteLineWidth = whiteLineWidths[i];
   const roadWidth = roadWidths[i];
   const percent = max(i / groundHeight, 0.3);
-  //const totalPercent = i / height;
   const curve = curveOffsets[i - skyHeight];
-  //const currentRoadWidth = MAX_ROAD_WIDTH * totalPercent;
+
   const currentRoadWidth = roadWidthForI(i);
   ctx.strokeStyle = index < MAX_TEX / 2 ? grass1 : grass2;
   ctx.beginPath();
@@ -1844,3 +1842,4 @@ function clearArray<T>(array: T[]) {
 // add flash of color/text when pick up mail
 // add flash of color/text when pick up gold
 // make truck a little red when it gets hit
+// width

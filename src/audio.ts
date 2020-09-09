@@ -10,21 +10,22 @@ compressor.connect(audioContext.destination);
 
 const gain = audioContext.createGain();
 gain.connect(compressor);
-//gain.gain.value = 0.05;
-gain.gain.value = 0.00;
+gain.gain.value = 0.05;
+//gain.gain.value = 0.00;
 
 const groundEngineHz = [50, 70];
 const airEngineHz = [80, 100];
 const groundEngine = createEngine(groundEngineHz);
 const airEngine = createEngine(airEngineHz);
+const triangle = "triangle";
 
 let enginesStarted = false;
 export const playHitWall = () =>
-  createSound([120, 100], [0.2, 0.4], "triangle");
+  createSound([120, 100], [0.2, 0.4], triangle);
 export const playHitMailbox = () =>
-  createSound([200, 220], [0.2, 0.3], "triangle");
+  createSound([200, 220], [0.2, 0.3], triangle);
 export const playHitGold = () =>
-  createSound([250, 250], [0.2, 0.3], "triangle");
+  createSound([250, 250], [0.2, 0.3], triangle);
 
 const Al = 233.08;
 const Bf = 246.94;
@@ -45,10 +46,10 @@ const battleNotes   = [ C,  Bf,  Al,   C,   F,   G,   A,  F,  R,   D,   E,   F, 
 const notesDuration = [.4,  .1,  .1,  .1,  .1,  .1,  .4, .2, .03, .2,  .1,  .1,  .1,  .1,  .1,  .4,  .2,  .03, .1,  .1,  .1, .1, .1, .1,  .1,  .1,  .1, .2, .2,  .2,  .2,  .2,  .2];
 
 export const playElectionDay = () =>
-  createSound(battleNotes, notesDuration, "triangle");
+  createSound(battleNotes, notesDuration, triangle);
 
 export const playNoFunds = () =>
-  createSound([250, 200, 150, 100], [0.4, 0.4, .4, 2.5], "triangle");
+  createSound([250, 200, 150, 100], [0.4, 0.4, .4, 2.5], triangle);
 
 // https://blog.j-labs.pl/2017/02/Creating-game-for-android-using-JavaScript-4-Sounds-Web-Audio-Api
 function createSound(notes: number[], times: number[], type: OscillatorType) {
@@ -64,7 +65,7 @@ function createSound(notes: number[], times: number[], type: OscillatorType) {
   notes.forEach((note, index) => {
     let oscillator = audioContext.createOscillator();
     oscillator.connect(noteGain);
-    oscillator.type = type || "triangle";
+    oscillator.type = type || triangle;
     oscillator.frequency.value = note;
     oscillator.onended = () => playNote(index + 1, sound, times);
     oscillators.push(oscillator);
@@ -97,7 +98,7 @@ function createEngine(frequencies: number[]): Sound {
   engineGain.connect(gain);
   const oscillatorNodes = frequencies.map(hz => {
     const oscillator = audioContext.createOscillator();
-    oscillator.type = "triangle";
+    oscillator.type = triangle;
     oscillator.frequency.value = hz;
     oscillator.connect(engineGain);
     return oscillator;
@@ -124,6 +125,7 @@ export function playAirEngine() {
   airEngine.gainNode.gain.setValueAtTime(airEngine.gainNode.gain.value, t);
   airEngine.gainNode.gain.setTargetAtTime(MAX_ENGINE, t, AUDIO_TIME_CONSTANT);
 }
+
 
 export function quietAllEngines() {
   groundEngine.gainNode.gain.setValueAtTime(
