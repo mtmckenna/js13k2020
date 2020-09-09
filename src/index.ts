@@ -204,7 +204,6 @@ let skyHeight = height * (1.0 - GROUND_PERCENT);
 let groundHeight = floor(height * GROUND_PERCENT);
 let roadStartX = (width - width * ROAD_WIDTH_PERCENT) / 2;
 let realTime = null;
-let lastFrameAt = null;
 let gameTime = 0;
 let gameTimeAbsolute = 0;
 
@@ -502,13 +501,19 @@ const SLOW_MULTIPLIER = 4;
 const normalTime = 70;
 const SIDE_SPRITE_INCREASE = 1.4;
 const slowTime = normalTime * SLOW_MULTIPLIER;
-const boundGameLoop = gameLoop(MAX_FPS, insideTick, this);
+const boundUpdateGame = gameLoop(MAX_FPS, updateGame, this);
+const boundUpdateTitleScreen = gameLoop(MAX_FPS, updateTitleScreen, this);
 let turningSpeed = TURNING_SPEED;
 let spriteIncrease = SIDE_SPRITE_INCREASE;
 let xOffset = 0;
 let graceMultiplier = 1;
 
-function insideTick(t: number) {
+
+function tick(t: number) {
+  realTime = t;
+  ctx.globalAlpha = 1.0;
+  requestAnimationFrame(tick);
+
   const divisor = inGracePeriod() ? slowTime : normalTime;
   gameTime += 10 / divisor;
   gameTimeAbsolute += 10 / normalTime;
@@ -520,7 +525,7 @@ function insideTick(t: number) {
   if (gameVars.started) {
     runGame(t);
   } else {
-    runTitleScreen();
+    runTitleScreen(t);
   }
 
   if (!instructionsFlashedRecently()) {
@@ -529,20 +534,18 @@ function insideTick(t: number) {
   }
 }
 
-function tick(t: number) {
-  realTime = t;
-  ctx.globalAlpha = 1.0;
-  requestAnimationFrame(tick);
-  boundGameLoop(t);
-}
-
 function isButtonPressed() {
   const touchPressed =
     pointerState.upAt && gameTime - pointerState.upAt < TOUCH_TIME;
   return inputState.left || inputState.right || inputState.jump || touchPressed;
 }
 
-function runTitleScreen() {
+function runTitleScreen(t: number) {
+  boundUpdateTitleScreen(t);
+  drawTitleScreen();
+}
+
+function updateTitleScreen() {
   if (isButtonPressed()) {
     if (!engineAlreadyStarted()) startEngines();
 
@@ -550,10 +553,12 @@ function runTitleScreen() {
     gameVars.startedAt = gameTime;
     gameVars.started = true;
   }
+}
+
+function drawTitleScreen() {
+  xOffset = xCenter;
 
   drawSky();
-
-  xOffset = xCenter;
   let textureCoord = 0;
   drawGround(road1);
   for (let i = zMap.length - 1; i > skyHeight; i--) {
@@ -674,6 +679,11 @@ function dxForI(i: number) {
 }
 
 function runGame(t: number) {
+  boundUpdateGame(t);
+  drawGame();
+}
+
+function updateGame() {
   if (readyToDecrementTime()) updateTimeLeft();
   const { timeLeft } = gameVars;
 
@@ -693,6 +703,11 @@ function runGame(t: number) {
     }
   }
 
+  if (gameVars.funding <= 0) gameOverFundingZero();
+  if (gameVars.timeLeft <= 0) gameOverTimeZero();
+}
+
+function drawGame() {
   drawSky();
   drawGround(road1);
   drawClouds();
@@ -746,16 +761,7 @@ function runGame(t: number) {
   drawTruck();
   drawTruckSparks();
   drawInstructions();
-
-  if (gameVars.funding <= 0) {
-    gameOverFundingZero();
-    return;
-  }
-
-  if (gameVars.timeLeft <= 0) {
-    gameOverTimeZero();
-    return;
-  }
+  drawGameOver();
 }
 
 function drawRoadSprites() {
@@ -903,20 +909,13 @@ function restartGame() {
   buildUpRoadSprites();
 }
 
-function gameOver() {
-  gameVars.gameOver = true;
-  if (!gameVars.gameOverAt) gameVars.gameOverAt = gameTime;
+function drawGameOver() {
+  if (!gameVars.gameOver) return;
   player.alpha = 1;
   unsetShake();
   quietAllEngines();
 
   const textOffset = getGameOverTextOffset();
-
-  if (!restartTimeout) {
-    restartTimeout = window.setTimeout(() => {
-      gameVars.readyToRestart = true;
-    }, RESTART_TIMEOUT_TIME);
-  }
 
   drawText(
     canvas,
@@ -970,23 +969,34 @@ function gameOver() {
 }
 
 function gameOverFundingZero() {
+  configureGameOver();
   gameOverText = GAME_OVER_FUNDING_TEXT;
   ballotText = `TRY AGAIN PLEASE!`;
   if (!gameVars.playedGameOverSound) {
     playNoFunds();
     gameVars.playedGameOverSound = true;
   }
-  gameOver();
 }
 
+
 function gameOverTimeZero() {
+  configureGameOver();
   gameOverText = GAME_OVER_TIME_TEXT;
   ballotText = `YOU GOT ${gameVars.ballots} BALLOTS!`;
   if (!gameVars.playedGameOverSound) {
     gameOverElectionDaySong = playElectionDay();
     gameVars.playedGameOverSound = true;
   }
-  gameOver();
+}
+
+function configureGameOver() {
+  gameVars.gameOver = true;
+  if (!gameVars.gameOverAt) gameVars.gameOverAt = gameTime;
+  if (!restartTimeout) {
+    restartTimeout = window.setTimeout(() => {
+      gameVars.readyToRestart = true;
+    }, RESTART_TIMEOUT_TIME);
+  }
 }
 
 function updateTimeLeft() {
@@ -1958,7 +1968,8 @@ function gameLoop(frameRate: number, gameLogicFunction: (timestamp: number) => v
 // add flash of color/text when pick up mail
 // add flash of color/text when pick up gold
 // make truck a little red when it gets hit
-// go even faster if you win
-// local storage
 // stop counting down if you lose
+// nicer bar decreasing
+// nicer bar decreasing sound
 // fps
+// center try again
