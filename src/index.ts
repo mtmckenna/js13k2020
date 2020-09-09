@@ -100,7 +100,7 @@ const MAILBOX_TIME_OFFSCREEN = 1;
 const INITIAL_WALLS = 2;
 const INTRO_TIME = 2;
 const GAME_START_DELAY = 18;
-const CURVE_AMPLITUDE = 0.0035;
+const CURVE_AMPLITUDE = 0.003;
 const CURVE_FREQUENCY = 10;
 const NUM_TREES = 30;
 const TREE_CHANCE_SPAWN = 0.05;
@@ -1852,10 +1852,14 @@ function scaleForI(i: number) {
 
 function overlaps(sprite: RoadSprite) {
   const scale = scaleForI(sprite.i);
-  const r2y = sprite.i + scale * sprite.dimensions;
+  const scaledSpriteDimensions = scale * sprite.dimensions;
+  const r2y = sprite.i + scaledSpriteDimensions;
+  const notThereYet = r2y < playerI;
 
-  const past = r2y >= playerI;
-  if (!past) return;
+  const collisionDivisor = sprite.name === "wall" ? 3 : 1;
+
+  const past = r2y > playerI + BIG_SPRITE_DIMENSIONS / collisionDivisor;
+  if (notThereYet || past) return;
 
   const playerOffset = xCenter;
 
@@ -1866,20 +1870,20 @@ function overlaps(sprite: RoadSprite) {
 
   const r1y = playerI + player.pos.y;
   const r1h = BIG_SPRITE_DIMENSIONS;
-  const r2h = sprite.dimensions * scale;
+  const r2h = scaledSpriteDimensions;
 
   const h = r1y < r2y + r2h && r1y + r1h > r2y ? true : false;
   const w = r1x < r2x + r2w && r1x + r1w > r2x ? true : false;
-
-  /*ctx.fillStyle = "green";
+/*
+  ctx.fillStyle = "green";
   ctx.fillRect(r2x, r2y, r2w, r2h);
 
   ctx.fillStyle = "red";
   ctx.fillRect(r1x, r1y, r1w, r1h);*/
 
   if (h && w) {
-    //ctx.fillStyle = "pink";
-    //ctx.fillRect(r1x, r1y, r1w, r1h);
+    /*ctx.fillStyle = "pink";
+    ctx.fillRect(r1x, r1y, r1w, r1h);*/
     return true;
   } else {
     return false;
@@ -1936,4 +1940,3 @@ function clearArray<T>(array: T[]) {
 // go even faster if you win
 // local storage
 // stop counting down if you lose
-// make collision boxes a little smaller
