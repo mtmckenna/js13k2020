@@ -1,3 +1,5 @@
+import "./index.css";
+
 import { drawText } from "./font";
 
 import {
