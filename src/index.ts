@@ -69,7 +69,7 @@ const HIT_TIME = 1.5;
 const FLASH_TIME = 0.25;
 const ANIMATION_TIME = 0.25;
 const INSTRUCTIONS_FLASH_TIME = 5;
-const FUNDING_HIT_AMOUNT = 25;
+const FUNDING_HIT_AMOUNT = 20;
 const MAILBOX_HIT_AMOUNT = 5;
 const GOLD_HIT_AMOUNT = 5;
 const PLAYER_EDGE = width / 2;
@@ -96,7 +96,7 @@ const INITIAL_WALLS = 2;
 const INTRO_TIME = 2;
 const GAME_START_DELAY = 18;
 //const CURVE_AMPLITUDE = .0017;
-const CURVE_AMPLITUDE = .0027;
+const CURVE_AMPLITUDE = .002;
 const CURVE_FREQUENCY = 10;
 const NUM_TREES = 30;
 const TREE_CHANCE_SPAWN = .05;
@@ -434,7 +434,7 @@ const rightMailboxes: RoadSprite[] = range(1).map(() => {
   };
 });
 
-const golds: RoadSprite[] = range(1).map(() => {
+const golds: RoadSprite[] = range(2).map(() => {
   return {
     image: goldImage,
     pos: {
@@ -490,14 +490,12 @@ const TURNING_SPEED = 4.8;
 
 const SLOW_MULTIPLIER = 4;
 const normalTime = 70;
-//const normalTime = 1;
 const SIDE_SPRITE_INCREASE = 1.4;
 const slowTime = normalTime * SLOW_MULTIPLIER;
 let turningSpeed = TURNING_SPEED;
 let spriteIncrease = SIDE_SPRITE_INCREASE;
 let xOffset = 0;
 let graceMultiplier = 1;
-
 
 function tick(t: number) {
   ctx.globalAlpha = 1.0;
@@ -704,7 +702,6 @@ function runGame(t: number) {
     bottomSegment.i = movingSegment.i;
 
     movingSegment.i = zMap.length - 1;
-    //const segmentIndex = randomIntBetween(0, roadSegments.length - 1);
     const movingSegmentIndex = roadSegments.indexOf(roadSegments.find(segment => segment.id === movingSegment.id));
     let segmentIndex = roadSegments.length - 1;
     if (movingSegmentIndex < roadSegments.length - 1) segmentIndex = movingSegmentIndex + 1;
@@ -1756,7 +1753,6 @@ function scaleForI(i: number) {
 }
 
 function overlaps(sprite: RoadSprite) {
-  //const scale = min(sprite.i / height, 1);
   const scale = scaleForI(sprite.i);
   const r2y = sprite.i + scale * sprite.dimensions;
 
@@ -1845,7 +1841,6 @@ function clearArray<T>(array: T[]) {
 // trees
 // overlapping audio
 // landing sound effect
-// what to do with fun color
 // add flash of color/text when pick up mail
 // add flash of color/text when pick up gold
 // make truck a little red when it gets hit
