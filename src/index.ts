@@ -905,6 +905,17 @@ function restartGame() {
     lastFlashedInstructionsAt: null
   };
 
+  inputState.left = false;
+  inputState.right = false;
+  inputState.jump = false;
+
+  pointerState.down = false;
+  pointerState.downAt = null;
+  pointerState.upAt = null;
+  pointerState.playerX = null;
+  pointerState.x = null;
+  pointerState.y = null;
+
   restartTimeout = null;
   golds.forEach(s => resetRoadSprite(s));
   rightMailboxes.forEach(s => resetRoadSprite(s));
