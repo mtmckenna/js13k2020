@@ -85,7 +85,7 @@ const ALPHA_INCREASE_AMOUNT = 0.09;
 const COLLECTABLE_DIMENSION = 16;
 const ENVELOPE_TIME = 5;
 const ENVELOPE_DELAY = 100;
-const GAME_OVER_FUNDING_TEXT = "RAN OUT OF FUNDS!";
+const GAME_OVER_FUNDING_TEXT = " RAN OUT OF FUNDS!";
 const GAME_OVER_TIME_TEXT = "IT IS ELECTION DAY!";
 const ROAD_SPRITE_SPAWN_X = width / 4;
 const RESTART_TIMEOUT_TIME = 1000;
@@ -107,6 +107,9 @@ const TREE_CHANCE_SPAWN = 0.05;
 const TREE_TIME_OFFSCREEN = 1;
 const SPRITE_HORIZON_OFFSET = 12;
 const MAX_FPS = 1 / 60 * 1000;
+const VISIBILE_FUNDING_INCREASE = .5;
+const WARNING_FUNDING_LIMIT = 50;
+const TERRIBLE_FUNDING_LIMIT = 25;
 
 let dx = 0;
 let ddx = 0;
@@ -119,6 +122,7 @@ let gameOverElectionDaySong: Sound = null;
 let gameVars: GameVars = {
   started: false,
   funding: START_FUNDING,
+  visibleFunding: START_FUNDING,
   timeLeft: START_TIME,
   ballots: 0,
   countdownBeepsPlayed: [],
@@ -886,6 +890,7 @@ function restartGame() {
   gameVars = {
     started: true,
     funding: START_FUNDING,
+    visibleFunding: START_FUNDING,
     timeLeft: START_TIME,
     ballots: 0,
     gameOver: false,
@@ -971,7 +976,7 @@ function drawGameOver() {
 function gameOverFundingZero() {
   configureGameOver();
   gameOverText = GAME_OVER_FUNDING_TEXT;
-  ballotText = `TRY AGAIN PLEASE!`;
+  ballotText = ` TRY AGAIN PLEASE!`;
   if (!gameVars.playedGameOverSound) {
     playNoFunds();
     gameVars.playedGameOverSound = true;
@@ -1000,6 +1005,7 @@ function configureGameOver() {
 }
 
 function updateTimeLeft() {
+  if (gameVars.gameOver) return;
   gameVars.timeLeft = max(gameVars.timeLeft - 1, 0);
   gameVars.lastTimeDecrementedAt = gameTimeAbsolute;
 }
@@ -1345,9 +1351,24 @@ function resetRoadSprite(sprite: RoadSprite) {
 
 function drawFundingMeter() {
   const introOffset = getIntroOffset();
-  ctx.fillStyle =
-    gameVars.funding < 20 ? BAD_FUNDING_COLOR : GOOD_FUNDING_COLOR;
-  const width = floor((MAX_FUNDING_BAR * gameVars.funding) / 100);
+
+  let fundingColor  =  GOOD_FUNDING_COLOR;
+
+  if (gameVars.funding < TERRIBLE_FUNDING_LIMIT) {
+    fundingColor = SPARK_COLOR;
+  } else if (gameVars.funding < WARNING_FUNDING_LIMIT) {
+    fundingColor = BAD_FUNDING_COLOR;
+  }
+
+  ctx.fillStyle = fundingColor;
+
+  if (gameVars.funding > gameVars.visibleFunding) {
+    gameVars.visibleFunding = min(gameVars.visibleFunding + VISIBILE_FUNDING_INCREASE, gameVars.funding);
+  } else {
+    gameVars.visibleFunding = max(gameVars.visibleFunding - VISIBILE_FUNDING_INCREASE, gameVars.funding);
+  }
+
+  const width = floor((MAX_FUNDING_BAR * gameVars.visibleFunding) / 100);
   ctx.fillRect(UI_PADDING, SECOND_ROW_Y + introOffset, width, FONT_SIZE + 1);
   drawText(
     canvas,
@@ -1404,7 +1425,7 @@ function getGameOverTextOffset(): number {
     x = lerp(-width, 0, t);
   } else {
     x = 0;
-  } 
+  }
 
   return x;
 }
@@ -1848,6 +1869,7 @@ interface GameVars {
   countdownBeepsPlayed: number[];
   ballots: number;
   funding: number;
+  visibleFunding: number;
   startedAt: number;
   gameOverAt: number;
   timeLeft: number;
@@ -1963,13 +1985,3 @@ function gameLoop(frameRate: number, gameLogicFunction: (timestamp: number) => v
   };
 }
 
-// TODO:
-// more intense funding running out visual indicator
-// add flash of color/text when pick up mail
-// add flash of color/text when pick up gold
-// make truck a little red when it gets hit
-// stop counting down if you lose
-// nicer bar decreasing
-// nicer bar decreasing sound
-// fps
-// center try again
